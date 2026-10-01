@@ -110,8 +110,15 @@ function resolveTunnelClient(logFailure = true) {
 }
 
 function quoteCommandArg(value) {
-  const s = String(value);
-  if (process.platform === 'win32') return `"${s.replace(/"/g, '\\"')}"`;
+  let s = String(value);
+  // tunnel-client tokenizes mcp.command using POSIX-style escaping even on Windows.
+  // Raw backslashes in paths such as C:\\Program Files\\... are therefore
+  // consumed as escape characters. Forward slashes are valid Windows path
+  // separators and survive the tokenizer.
+  if (process.platform === 'win32') {
+    s = s.replace(/\\\\/g, '/');
+    return `"${s.replace(/"/g, '\\"')}"`;
+  }
   return `'${s.replace(/'/g, `'"'"'`)}'`;
 }
 
