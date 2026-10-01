@@ -116,7 +116,7 @@ function quoteCommandArg(value) {
   // consumed as escape characters. Forward slashes are valid Windows path
   // separators and survive the tokenizer.
   if (process.platform === 'win32') {
-    s = s.replace(/\\\\/g, '/');
+    s = s.replace(/\\/g, '/');
     return `"${s.replace(/"/g, '\\"')}"`;
   }
   return `'${s.replace(/'/g, `'"'"'`)}'`;
