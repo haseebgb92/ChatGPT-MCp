@@ -1,0 +1,85 @@
+name: Build installers
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: windows-latest
+            target: win
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.0"
+
+      - name: Install app dependencies
+        run: npm install
+
+      - name: Build full OpenAI tunnel-client (Linux)
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          rm -rf .tmp-tunnel-client vendor/tunnel-client
+          git clone --depth 1 --branch v0.0.15 https://github.com/openai/tunnel-client.git .tmp-tunnel-client
+          mkdir -p vendor/tunnel-client
+          cd .tmp-tunnel-client
+          go build -o ../vendor/tunnel-client/tunnel-client ./cmd/client
+          chmod +x ../vendor/tunnel-client/tunnel-client
+
+      - name: Build full OpenAI tunnel-client (Windows)
+        if: matrix.target == 'win'
+        shell: pwsh
+        run: |
+          if (Test-Path .tmp-tunnel-client) { Remove-Item -Recurse -Force .tmp-tunnel-client }
+          if (Test-Path vendor/tunnel-client) { Remove-Item -Recurse -Force vendor/tunnel-client }
+          git clone --depth 1 --branch v0.0.15 https://github.com/openai/tunnel-client.git .tmp-tunnel-client
+          New-Item -ItemType Directory -Force -Path vendor/tunnel-client | Out-Null
+          Push-Location .tmp-tunnel-client
+          go build -o ../vendor/tunnel-client/tunnel-client.exe ./cmd/client
+          Pop-Location
+
+      - name: Verify JavaScript
+        run: npm run check
+
+      - name: Build Linux installers
+        if: matrix.target == 'linux'
+        run: npm run dist:linux
+
+      - name: Build Windows installer
+        if: matrix.target == 'win'
+        run: npm run dist:win
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatGPT-MCP-Bridge-${{ matrix.target }}
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.exe
+          if-no-files-found: error
