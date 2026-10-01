@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ChatGPT MCP Bridge</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>ChatGPT MCP Bridge</h1>
+        <p>Local files + terminal and Chrome control through Secure MCP Tunnel.</p>
+      </div>
+      <button id="restartAll" class="secondary">Restart running servers</button>
+    </header>
+
+    <section class="status-grid">
+      <article class="server-card">
+        <div class="server-title"><span id="localDot" class="dot"></span><div><h2>Local MCP</h2><p>Files, write access and optional terminal.</p></div></div>
+        <button id="localToggle">Start Local</button>
+      </article>
+      <article class="server-card">
+        <div class="server-title"><span id="browserDot" class="dot"></span><div><h2>Web MCP</h2><p>Chrome DevTools MCP using your browser session.</p></div></div>
+        <button id="browserToggle">Start Web</button>
+      </article>
+    </section>
+
+    <section>
+      <h2>Connection</h2>
+      <div class="form-grid">
+        <label class="wide">Runtime API key
+          <input id="apiKey" type="password" autocomplete="off" placeholder="sk-proj-..." />
+          <small>Stored with OS encryption when “Remember” is enabled.</small>
+        </label>
+        <label>Local tunnel ID
+          <input id="localTunnelId" placeholder="tunnel_..." />
+        </label>
+        <label>Web tunnel ID
+          <input id="browserTunnelId" placeholder="tunnel_..." />
+        </label>
+      </div>
+      <label class="check"><input id="rememberApiKey" type="checkbox" /> Remember API key securely</label>
+      <p class="hint">Local and Web need different tunnel IDs when both are running.</p>
+    </section>
+
+    <section>
+      <div class="section-head"><div><h2>Local folders</h2><p>Only these folders are exposed to the Local MCP file tools.</p></div><button id="addFolder" class="secondary">Add folder</button></div>
+      <div id="roots" class="roots"></div>
+      <div class="toggles">
+        <label class="check"><input id="enableWrite" type="checkbox" /> Enable create/write tools</label>
+        <label class="check"><input id="enableShell" type="checkbox" /> Enable terminal tool</label>
+        <label class="check danger"><input id="fullShell" type="checkbox" /> Full shell (not sandboxed; runs with your user permissions)</label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Chrome / Web MCP</h2>
+      <div class="toggles">
+        <label class="check"><input id="browserVision" type="checkbox" /> Coordinate/vision tools</label>
+        <label class="check"><input id="browserUsageStatistics" type="checkbox" /> Allow Chrome MCP usage statistics</label>
+      </div>
+      <p class="hint">For auto-connect, enable Chrome remote debugging at <b>chrome://inspect/#remote-debugging</b>.</p>
+    </section>
+
+    <section>
+      <h2>Startup</h2>
+      <div class="toggles">
+        <label class="check"><input id="startAtLogin" type="checkbox" /> Start app when I sign in</label>
+        <label class="check"><input id="startLocalOnLaunch" type="checkbox" /> Start Local MCP automatically</label>
+        <label class="check"><input id="startBrowserOnLaunch" type="checkbox" /> Start Web MCP automatically</label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Advanced</h2>
+      <label>Custom tunnel-client executable (optional)
+        <input id="customTunnelClient" placeholder="Leave blank to use bundled tunnel-client" />
+      </label>
+      <p class="hint">Detected: <span id="detectedTunnelClient">—</span></p>
+    </section>
+
+    <div class="actions"><button id="save">Save settings</button><span id="message"></span></div>
+
+    <section>
+      <div class="section-head"><div><h2>Logs</h2><p>Runtime output from both tunnels.</p></div><button id="clearLogs" class="secondary">Clear</button></div>
+      <pre id="logs"></pre>
+    </section>
+
+    <footer>
+      <button class="link" data-url="https://platform.openai.com/settings/organization/tunnels">OpenAI Tunnels</button>
+      <button class="link" data-url="https://platform.openai.com/settings/organization/api-keys">Runtime API Keys</button>
+      <button class="link" data-url="https://chatgpt.com/#settings/Connectors">ChatGPT Plugins</button>
+    </footer>
+  </main>
+  <script src="renderer.js"></script>
+</body>
+</html>
