@@ -63,6 +63,36 @@ Then install it with:
 sudo apt install ./ChatGPT-MCP-Bridge*.deb
 ```
 
+## Windows — one-command install
+
+Open **PowerShell** and run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force; irm "https://raw.githubusercontent.com/haseebgb92/ChatGPT-MCp/main/install-windows.ps1" | iex
+```
+
+The installer will automatically:
+
+1. install Git if missing;
+2. install Node.js LTS if missing;
+3. install Go if missing;
+4. download ChatGPT MCP Bridge;
+5. install npm dependencies;
+6. build the full OpenAI `tunnel-client.exe`;
+7. validate the application;
+8. build the Windows installer;
+9. launch the generated installer.
+
+After installation, open **ChatGPT MCP Bridge** from the Windows Start menu.
+
+If `raw.githubusercontent.com` is stale or blocked on your network, use the GitHub API raw endpoint instead:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+$script = Invoke-RestMethod -Headers @{ Accept = "application/vnd.github.raw+json" } -Uri "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-windows.ps1?ref=main"
+Invoke-Expression $script
+```
+
 ## Windows install
 
 Download the newest Windows `.exe` installer from:
