@@ -128,7 +128,7 @@ else
   npm run check
 
   say "Building Linux .deb"
-  npm run dist:linux
+  npm run dist:linux:deb
 
   BUILT_DEB="$(find dist -maxdepth 1 -type f -name '*.deb' -print -quit)"
   [[ -n "$BUILT_DEB" ]] || die "The Linux build completed without producing a .deb file."
