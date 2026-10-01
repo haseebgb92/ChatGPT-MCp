@@ -32,7 +32,7 @@
   "build": {
     "appId": "com.advertpreneur.chatgptmcpbridge",
     "productName": "ChatGPT MCP Bridge",
-    "asar": true,
+    "asar": false,
     "files": [
       "src/**/*",
       "bundled/**/*",
@@ -44,16 +44,24 @@
       {
         "from": "vendor/tunnel-client",
         "to": "tunnel-client",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Utility",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.png",
+      "executableName": "chatgpt-mcp-bridge"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "assets/icon.ico"
     },
     "nsis": {
@@ -61,6 +69,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "artifactName": "ChatGPT-MCP-Bridge-${version}-${os}-${arch}.${ext}"
   }
 }
