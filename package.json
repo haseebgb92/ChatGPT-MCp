@@ -1,0 +1,66 @@
+{
+  "name": "chatgpt-mcp-bridge",
+  "version": "0.1.0",
+  "description": "Cross-platform tray manager for ChatGPT Secure MCP Tunnel: Local Files + Chrome DevTools MCP.",
+  "main": "src/main.js",
+  "author": "Advertpreneur",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haseebgb92/ChatGPT-MCp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/haseebgb92/ChatGPT-MCp/issues"
+  },
+  "homepage": "https://github.com/haseebgb92/ChatGPT-MCp#readme",
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/renderer.js && node --check bundled/local-mcp/server.js && node --check bundled/local-mcp/config.js && node --check bundled/local-mcp/security.js",
+    "dist:linux": "electron-builder --linux AppImage deb",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.18.2",
+    "chrome-devtools-mcp": "1.10.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.advertpreneur.chatgptmcpbridge",
+    "productName": "ChatGPT MCP Bridge",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "bundled/**/*",
+      "assets/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/tunnel-client",
+        "to": "tunnel-client",
+        "filter": ["**/*"]
+      }
+    ],
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility",
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
