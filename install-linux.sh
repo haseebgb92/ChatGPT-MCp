@@ -15,7 +15,7 @@ fi
 
 ARCH="$(dpkg --print-architecture 2>/dev/null || true)"
 if [[ "$ARCH" != "amd64" ]]; then
-  die "The current release supports Debian/Ubuntu/Linux Mint amd64 only. Detected: ${ARCH:-unknown}"
+  die "The current Linux package supports Debian/Ubuntu/Linux Mint amd64 only. Detected: ${ARCH:-unknown}"
 fi
 
 if ! command -v apt-get >/dev/null 2>&1; then
@@ -28,7 +28,7 @@ fi
 
 say "Installing system prerequisites"
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl libsecret-1-0 gnome-keyring
+sudo apt-get install -y ca-certificates curl git build-essential xz-utils libsecret-1-0 gnome-keyring
 
 if [[ "${SKIP_CHROME:-0}" != "1" ]] && \
    ! command -v google-chrome >/dev/null 2>&1 && \
@@ -41,34 +41,80 @@ if [[ "${SKIP_CHROME:-0}" != "1" ]] && \
   sudo apt-get install -y "$TMP/google-chrome.deb"
 fi
 
-say "Finding latest ChatGPT MCP Bridge release"
+say "Checking for a published ChatGPT MCP Bridge release"
 RELEASE_JSON="$(curl -fsSL \
   -H 'Accept: application/vnd.github+json' \
   -H 'X-GitHub-Api-Version: 2022-11-28' \
-  "$API")" || die "Could not read the latest GitHub release."
+  "$API" 2>/dev/null || true)"
 
-DEB_URL="$(printf '%s\n' "$RELEASE_JSON" \
-  | grep -oE '"browser_download_url":[[:space:]]*"[^"]+\.deb"' \
-  | head -n 1 \
-  | sed -E 's/^"browser_download_url":[[:space:]]*"([^"]+)"$/\1/')" || true
-
-if [[ -z "$DEB_URL" ]]; then
-  die "No .deb installer is attached to the latest release yet. Open https://github.com/$REPO/actions and build/tag a release first."
+DEB_URL=""
+if [[ -n "$RELEASE_JSON" ]]; then
+  DEB_URL="$(printf '%s\n' "$RELEASE_JSON" \
+    | grep -oE '"browser_download_url":[[:space:]]*"[^"]+\.deb"' \
+    | head -n 1 \
+    | sed -E 's/^"browser_download_url":[[:space:]]*"([^"]+)"$/\1/' || true)"
 fi
 
-say "Downloading ChatGPT MCP Bridge"
-curl -fL "$DEB_URL" -o "$TMP/chatgpt-mcp-bridge.deb"
+if [[ -n "$DEB_URL" ]]; then
+  say "Downloading latest published .deb"
+  curl -fL "$DEB_URL" -o "$TMP/chatgpt-mcp-bridge.deb"
+else
+  say "No published .deb release found; building the current main branch automatically"
 
-say "Installing ChatGPT MCP Bridge and required package dependencies"
+  NODE_VERSION="$(curl -fsSL https://nodejs.org/dist/index.tab | awk 'NR>1 && $1 ~ /^v24\./ { print $1; exit }')"
+  [[ -n "$NODE_VERSION" ]] || die "Could not determine the latest Node.js 24 release."
+  say "Using Node.js $NODE_VERSION"
+  curl -fL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz" -o "$TMP/node.tar.xz"
+  mkdir -p "$TMP/node"
+  tar -xJf "$TMP/node.tar.xz" -C "$TMP/node" --strip-components=1
+  export PATH="$TMP/node/bin:$PATH"
+
+  GO_VERSION="$(curl -fsSL 'https://go.dev/VERSION?m=text' | head -n 1)"
+  [[ "$GO_VERSION" =~ ^go[0-9]+\.[0-9]+ ]] || die "Could not determine the current Go release."
+  say "Using $GO_VERSION"
+  curl -fL "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz" -o "$TMP/go.tar.gz"
+  mkdir -p "$TMP/go"
+  tar -xzf "$TMP/go.tar.gz" -C "$TMP/go" --strip-components=1
+  export PATH="$TMP/go/bin:$PATH"
+
+  say "Downloading ChatGPT MCP Bridge source"
+  git clone --depth 1 "https://github.com/$REPO.git" "$TMP/app"
+  cd "$TMP/app"
+
+  say "Installing application dependencies"
+  npm install
+
+  say "Building bundled OpenAI tunnel-client"
+  git clone --depth 1 --branch v0.0.15 https://github.com/openai/tunnel-client.git "$TMP/tunnel-client"
+  mkdir -p vendor/tunnel-client
+  (
+    cd "$TMP/tunnel-client"
+    go build -o "$TMP/app/vendor/tunnel-client/tunnel-client" ./cmd/client
+  )
+  chmod +x vendor/tunnel-client/tunnel-client
+
+  say "Validating application"
+  npm run check
+
+  say "Building Linux .deb"
+  npm run dist:linux
+
+  BUILT_DEB="$(find dist -maxdepth 1 -type f -name '*.deb' -print -quit)"
+  [[ -n "$BUILT_DEB" ]] || die "The Linux build completed without producing a .deb file."
+  cp "$BUILT_DEB" "$TMP/chatgpt-mcp-bridge.deb"
+fi
+
+say "Installing ChatGPT MCP Bridge and package dependencies"
 sudo apt-get install -y "$TMP/chatgpt-mcp-bridge.deb"
 
 say "Installation complete"
 printf '%s\n' \
   "Open 'ChatGPT MCP Bridge' from your applications menu." \
-  "The packaged app already contains:" \
+  "" \
+  "The installed app contains:" \
   "  - Local MCP server" \
   "  - Chrome DevTools MCP" \
-  "  - Node/Electron runtime" \
+  "  - Electron/Node runtime" \
   "  - OpenAI tunnel-client" \
   "" \
   "You only need to enter your own Runtime API key and two tunnel IDs." \
