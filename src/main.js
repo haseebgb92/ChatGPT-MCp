@@ -178,7 +178,12 @@ async function startTunnel(kind) {
 
   const child = spawn(
     tunnelClient,
-    ['run', '--health.listen-addr', '127.0.0.1:0'],
+    [
+      'run',
+      '--control-plane.tunnel-id', tunnelId,
+      '--mcp.command', mcpCommand,
+      '--health.listen-addr', '127.0.0.1:0'
+    ],
     { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }
   );
 
