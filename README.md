@@ -32,7 +32,7 @@ Current Linux packages target **Debian / Ubuntu / Linux Mint on amd64/x86_64**.
 Run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/haseebgb92/ChatGPT-MCp/main/install-linux.sh | bash
+curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-linux.sh?ref=main" | bash
 ```
 
 The installer:
@@ -46,7 +46,7 @@ The installer:
 If you already have the browser you want and do not want the installer to install Chrome:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/haseebgb92/ChatGPT-MCp/main/install-linux.sh | SKIP_CHROME=1 bash
+curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-linux.sh?ref=main" | SKIP_CHROME=1 bash
 ```
 
 After installation, open **ChatGPT MCP Bridge** from the Linux applications menu.
