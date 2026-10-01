@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.tmp-tunnel-client/
+vendor/tunnel-client/tunnel-client
+vendor/tunnel-client/tunnel-client.exe
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
