@@ -1,6 +1,10 @@
-# ChatGPT MCP Bridge
+# ChatGPT MCP Bridge — Secure Local Files & Chrome MCP for ChatGPT
 
-Cross-platform system-tray manager that connects **ChatGPT Web** to your own computer through **OpenAI Secure MCP Tunnel**.
+Cross-platform desktop bridge that connects **ChatGPT** to your own computer through **OpenAI Secure MCP Tunnel** — without exposing your local MCP servers to the public internet.
+
+[Website](https://haseebgb92.github.io/ChatGPT-MCp/) · [Latest Release](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest) · [Security](SECURITY.md) · [Issues](https://github.com/haseebgb92/ChatGPT-MCp/issues)
+
+![ChatGPT MCP Bridge dashboard](docs/images/chatgpt-mcp-bridge-dashboard.png)
 
 It provides two independent MCP connections:
 
@@ -172,13 +176,9 @@ Paste the Runtime API key into **Runtime API key** in ChatGPT MCP Bridge.
 
 When **Remember API key securely** is enabled, the app stores it using Electron `safeStorage` / your operating system's secure credential encryption instead of writing the secret directly into the normal settings file.
 
-## ChatGPT setup
+## ChatGPT plugin setup
 
-Open ChatGPT's connector/app settings:
-
-https://chatgpt.com/#settings/Connectors
-
-Enable Developer Mode/custom MCP apps if your account/workspace requires it.
+In ChatGPT, enable **Developer mode** under **Settings → Security and login**, then open **Plugins** and add the MCP connection using **Tunnel** as the connection method. Developer-mode availability can depend on your account and workspace policy.
 
 Create the Local app/connector:
 
@@ -449,7 +449,7 @@ See [SECURITY.md](SECURITY.md).
 
 ## Current status
 
-**v0.1.0**
+**v0.1.1**
 
 The first release focuses on making Local MCP and Chrome MCP simple to run from a tray app on Linux and Windows.
 
