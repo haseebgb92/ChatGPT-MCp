@@ -449,7 +449,7 @@ See [SECURITY.md](SECURITY.md).
 
 ## Current status
 
-**v0.1.2**
+**v0.1.3**
 
 The first release focuses on making Local MCP and Chrome MCP simple to run from a tray app on Linux and Windows.
 
