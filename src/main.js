@@ -4,6 +4,21 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  });
+}
+
+app.setName('ChatGPT MCP Bridge');
+
+
 let win = null;
 let tray = null;
 let quitting = false;
@@ -258,6 +273,7 @@ function refreshTrayMenu() {
 
 function showWindow() {
   if (win) {
+    if (win.isMinimized()) win.restore();
     win.show();
     win.focus();
   }
@@ -279,10 +295,10 @@ async function createWindow() {
   });
 
   await win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  win.on('close', e => {
+  win.on('close', () => {
     if (!quitting) {
-      e.preventDefault();
-      win.hide();
+      quitting = true;
+      app.quit();
     }
   });
   win.once('ready-to-show', () => win.show());
@@ -370,7 +386,11 @@ app.whenReady().then(async () => {
   createTray();
 
   const settings = await loadSettings();
-  if (process.argv.includes('--hidden')) win.hide();
+  if (process.argv.includes('--hidden')) {
+    win.hide();
+  } else {
+    showWindow();
+  }
   if (settings.startLocalOnLaunch) {
     startTunnel('local').catch(e => addLog('local', e.message));
   }

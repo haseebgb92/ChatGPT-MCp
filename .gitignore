@@ -8,3 +8,5 @@ vendor/tunnel-client/tunnel-client.exe
 Thumbs.db
 .env
 .env.*
+bundled/meta-manager-proxy/
+bundled/meta-manager-proxy-server.js.tmp

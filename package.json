@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-mcp-bridge",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "Cross-platform tray manager for ChatGPT Secure MCP Tunnel: Local Files + Chrome DevTools MCP.",
   "main": "src/main.js",
   "author": {
@@ -40,6 +40,9 @@
     "files": [
       "src/**/*",
       "bundled/**/*",
+      "!bundled/meta-manager-proxy/**/*",
+      "!bundled/*meta-manager*",
+      "!**/*meta-manager-proxy*",
       "assets/**/*",
       "package.json",
       "node_modules/**/*"
@@ -62,7 +65,19 @@
       "icon": "assets/icon.png",
       "executableName": "chatgpt-mcp-bridge",
       "maintainer": "Advertpreneur <haseeb.dlp@gmail.com>",
-      "synopsis": "Tray bridge for ChatGPT Secure MCP Tunnel"
+      "synopsis": "Tray bridge for ChatGPT Secure MCP Tunnel",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "Name": "ChatGPT MCP Bridge",
+          "Comment": "Manage Local Files and Web MCP tunnels for ChatGPT",
+          "Icon": "chatgpt-mcp-bridge",
+          "StartupWMClass": "chatgpt-mcp-bridge",
+          "Terminal": "false",
+          "Type": "Application",
+          "Categories": "Utility;Development;"
+        }
+      }
     },
     "win": {
       "target": [
@@ -77,5 +92,6 @@
       "createStartMenuShortcut": true
     },
     "artifactName": "ChatGPT-MCP-Bridge-${version}-${os}-${arch}.${ext}"
-  }
+  },
+  "desktopName": "chatgpt-mcp-bridge.desktop"
 }
