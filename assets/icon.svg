@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="80" x2="890" y2="940" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1769ff"/>
+      <stop offset="0.48" stop-color="#387cff"/>
+      <stop offset="1" stop-color="#8b5cff"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="512" y1="500" x2="512" y2="980" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#84f1ff" stop-opacity=".95"/>
+      <stop offset=".52" stop-color="#5fc8ff" stop-opacity=".48"/>
+      <stop offset="1" stop-color="#755cff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0" cy="0" r="1" gradientTransform="translate(510 470) rotate(90) scale(320)">
+      <stop stop-color="#c9f8ff" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#c9f8ff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+  </defs>
+  <rect x="36" y="36" width="952" height="952" rx="220" fill="url(#bg)"/>
+  <circle cx="510" cy="430" r="340" fill="url(#orb)"/>
+  <path d="M222 640C310 640 315 445 512 445s202 195 290 195" fill="none" stroke="#fff" stroke-width="58" stroke-linecap="round"/>
+  <path d="M237 650V430M787 650V430" stroke="#fff" stroke-width="50" stroke-linecap="round"/>
+  <path d="M345 616V510M679 616V510" stroke="#fff" stroke-width="34" stroke-linecap="round" opacity=".92"/>
+  <path d="M270 650H754" stroke="#fff" stroke-width="42" stroke-linecap="round"/>
+  <path d="M512 505L360 950H664L512 505Z" fill="url(#glow)"/>
+  <path d="M512 522L447 935H577L512 522Z" fill="#d9fbff" opacity=".88"/>
+  <circle cx="512" cy="507" r="34" fill="#fff" filter="url(#shadow)" opacity=".85"/>
+  <circle cx="512" cy="507" r="19" fill="#fff"/>
+</svg>

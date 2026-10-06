@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-mcp-bridge",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Cross-platform tray manager for ChatGPT Secure MCP Tunnel: Local Files + Chrome DevTools MCP.",
   "main": "src/main.js",
   "author": {
@@ -30,12 +30,12 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "electron": "^38.1.2",
+    "electron": "41.5.1",
     "electron-builder": "^26.0.12"
   },
   "build": {
     "appId": "com.advertpreneur.chatgptmcpbridge",
-    "productName": "ChatGPT MCP Bridge",
+    "productName": "MCP Bridge",
     "asar": false,
     "files": [
       "src/**/*",
@@ -63,16 +63,16 @@
       ],
       "category": "Utility",
       "icon": "assets/icon.png",
-      "executableName": "chatgpt-mcp-bridge",
+      "executableName": "mcp-bridge",
       "maintainer": "Advertpreneur <haseeb.dlp@gmail.com>",
       "synopsis": "Tray bridge for ChatGPT Secure MCP Tunnel",
       "syncDesktopName": true,
       "desktop": {
         "entry": {
-          "Name": "ChatGPT MCP Bridge",
-          "Comment": "Manage Local Files and Web MCP tunnels for ChatGPT",
-          "Icon": "chatgpt-mcp-bridge",
-          "StartupWMClass": "chatgpt-mcp-bridge",
+          "Name": "MCP Bridge",
+          "Comment": "Secure Local Files and Web MCP bridge",
+          "Icon": "mcp-bridge",
+          "StartupWMClass": "mcp-bridge",
           "Terminal": "false",
           "Type": "Application",
           "Categories": "Utility;Development;"
@@ -91,7 +91,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
-    "artifactName": "ChatGPT-MCP-Bridge-${version}-${os}-${arch}.${ext}"
+    "artifactName": "MCP-Bridge-${version}-${os}-${arch}.${ext}"
   },
-  "desktopName": "chatgpt-mcp-bridge.desktop"
+  "desktopName": "mcp-bridge.desktop"
 }

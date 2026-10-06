@@ -3,97 +3,245 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ChatGPT MCP Bridge</title>
+  <title>MCP Bridge</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main>
-    <header>
-      <div>
-        <h1>ChatGPT MCP Bridge</h1>
-        <p>Local files + terminal and Chrome control through Secure MCP Tunnel.</p>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="../../assets/icon.svg" alt="" class="brand-icon" />
+        <div>
+          <strong>MCP Bridge</strong>
+          <span>Secure Local + Web MCP</span>
+        </div>
       </div>
-      <button id="restartAll" class="secondary">Restart running servers</button>
-    </header>
 
-    <section class="status-grid">
-      <article class="server-card">
-        <div class="server-title"><span id="localDot" class="dot"></span><div><h2>Local MCP</h2><p>Files, write access and optional terminal.</p></div></div>
-        <button id="localToggle">Start Local</button>
-      </article>
-      <article class="server-card">
-        <div class="server-title"><span id="browserDot" class="dot"></span><div><h2>Web MCP</h2><p>Chrome DevTools MCP using your browser session.</p></div></div>
-        <button id="browserToggle">Start Web</button>
-      </article>
-    </section>
+      <nav>
+        <button class="nav-item active" data-target="overview"><span>⌂</span>Overview</button>
+        <button class="nav-item" data-target="connections"><span>↗</span>Connections</button>
+        <button class="nav-item" data-target="folders"><span>▣</span>Local Folders</button>
+        <button class="nav-item" data-target="browser"><span>◎</span>Browser</button>
+        <button class="nav-item" data-target="activity"><span>⌁</span>Activity</button>
+        <button class="nav-item" data-target="settings"><span>⚙</span>Settings</button>
+      </nav>
 
-    <section>
-      <h2>Connection</h2>
-      <div class="form-grid">
-        <label class="wide">Runtime API key
-          <input id="apiKey" type="password" autocomplete="off" placeholder="sk-proj-..." />
-          <small>Stored with OS encryption when “Remember” is enabled.</small>
-        </label>
-        <label>Local tunnel ID
-          <input id="localTunnelId" placeholder="tunnel_..." />
-        </label>
-        <label>Web tunnel ID
-          <input id="browserTunnelId" placeholder="tunnel_..." />
-        </label>
+      <div class="sidebar-status">
+        <span id="sidebarDot" class="live-dot"></span>
+        <div>
+          <strong id="sidebarStatus">Services stopped</strong>
+          <span id="sidebarSub">Local + Web MCP</span>
+        </div>
       </div>
-      <label class="check"><input id="rememberApiKey" type="checkbox" /> Remember API key securely</label>
-      <p class="hint">Local and Web must use different tunnel IDs.</p>
-    </section>
+    </aside>
 
-    <section>
-      <div class="section-head"><div><h2>Local folders</h2><p>Only these folders are exposed to the Local MCP file tools.</p></div><button id="addFolder" class="secondary">Add folder</button></div>
-      <div id="roots" class="roots"></div>
-      <div class="toggles">
-        <label class="check"><input id="enableWrite" type="checkbox" /> Enable create/write tools</label>
-        <label class="check"><input id="enableShell" type="checkbox" /> Enable terminal tool</label>
-        <label class="check danger"><input id="fullShell" type="checkbox" /> Full shell (not sandboxed; runs with your user permissions)</label>
+    <main class="content">
+      <section id="overview" class="hero panel-less">
+        <div>
+          <div class="eyebrow">MCP BRIDGE</div>
+          <h1>Your local bridge, under control.</h1>
+          <p>Securely expose selected folders and your browser session to ChatGPT through OpenAI Secure MCP Tunnel.</p>
+        </div>
+        <button id="restartAll" class="ghost-btn">Restart running services</button>
+      </section>
+
+      <section class="stats-grid panel-less">
+        <article class="stat-card">
+          <div class="stat-icon blue">▣</div>
+          <div>
+            <span class="stat-label">Local MCP</span>
+            <strong id="localState">Stopped</strong>
+            <small id="localMeta">No local tunnel active</small>
+          </div>
+          <span id="localDot" class="status-pill">Offline</span>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-icon violet">◎</div>
+          <div>
+            <span class="stat-label">Web MCP</span>
+            <strong id="browserState">Stopped</strong>
+            <small id="browserMeta">No browser tunnel active</small>
+          </div>
+          <span id="browserDot" class="status-pill">Offline</span>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-icon mint">⌘</div>
+          <div>
+            <span class="stat-label">Runtime API key</span>
+            <strong id="keyState">Not configured</strong>
+            <small>Stored locally with OS encryption</small>
+          </div>
+          <span id="keyPill" class="status-pill">Missing</span>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-icon cyan">◇</div>
+          <div>
+            <span class="stat-label">Allowed roots</span>
+            <strong id="rootCount">0 folders</strong>
+            <small id="mountCount">Checking mounted drives…</small>
+          </div>
+          <span class="status-pill good">Protected</span>
+        </article>
+      </section>
+
+      <section id="connections" class="grid-two">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2>Connections</h2>
+              <p>Start or stop the two MCP tunnels independently.</p>
+            </div>
+          </div>
+
+          <div class="service-row">
+            <div class="service-logo blue">▣</div>
+            <div class="service-copy">
+              <strong>Local MCP</strong>
+              <span id="localTunnelLabel">Tunnel not configured</span>
+            </div>
+            <button id="localToggle" class="primary-btn">Start Local</button>
+          </div>
+
+          <div class="service-row">
+            <div class="service-logo violet">◎</div>
+            <div class="service-copy">
+              <strong>Web MCP</strong>
+              <span id="browserTunnelLabel">Tunnel not configured</span>
+            </div>
+            <button id="browserToggle" class="primary-btn">Start Web</button>
+          </div>
+        </article>
+
+        <article id="browser" class="card">
+          <div class="card-head">
+            <div>
+              <h2>Browser connection</h2>
+              <p>Chrome DevTools MCP uses your existing Chrome session.</p>
+            </div>
+          </div>
+          <div class="info-stack">
+            <div class="info-row"><span>Vision tools</span><strong id="visionStatus">Enabled</strong></div>
+            <div class="info-row"><span>Usage statistics</span><strong id="statsStatus">Disabled</strong></div>
+            <div class="info-row"><span>Tunnel client</span><strong id="clientStatus">Detected</strong></div>
+          </div>
+          <p class="soft-note">For automatic browser control, Chrome remote debugging must be enabled at <b>chrome://inspect/#remote-debugging</b>.</p>
+        </article>
+      </section>
+
+      <section id="folders" class="card">
+        <div class="card-head">
+          <div>
+            <h2>Local folders</h2>
+            <p>Only folders listed here are available through Local MCP.</p>
+          </div>
+          <button id="addFolder" class="outline-btn">+ Add folder</button>
+        </div>
+        <div id="roots" class="roots-list"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>Mounted drives</h2>
+            <p>External SSDs and mounted volumes detected by Linux.</p>
+          </div>
+          <button id="refreshDrives" class="outline-btn">Refresh</button>
+        </div>
+        <div id="mountedDrives" class="drive-grid">
+          <div class="empty-state">Checking mounted drives…</div>
+        </div>
+      </section>
+
+      <section id="activity" class="card">
+        <div class="card-head">
+          <div>
+            <h2>Recent activity</h2>
+            <p>Live Local MCP and Web MCP runtime events.</p>
+          </div>
+          <button id="clearLogs" class="text-btn">Clear view</button>
+        </div>
+        <pre id="logs"></pre>
+      </section>
+
+      <section id="settings" class="settings-grid">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2>Connection settings</h2>
+              <p>Runtime key and OpenAI Secure MCP Tunnel IDs.</p>
+            </div>
+          </div>
+
+          <label>Runtime API key
+            <input id="apiKey" type="password" autocomplete="off" placeholder="sk-proj-…" />
+            <small>Saved using your operating system's secure storage.</small>
+          </label>
+
+          <div class="field-grid">
+            <label>Local tunnel ID
+              <input id="localTunnelId" placeholder="tunnel_…" />
+            </label>
+            <label>Web tunnel ID
+              <input id="browserTunnelId" placeholder="tunnel_…" />
+            </label>
+          </div>
+
+          <label class="toggle-line"><input id="rememberApiKey" type="checkbox" /> Remember API key securely</label>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2>Permissions & startup</h2>
+              <p>Choose what Local MCP is allowed to do.</p>
+            </div>
+          </div>
+          <div class="toggle-stack">
+            <label class="toggle-line"><input id="enableWrite" type="checkbox" /> Create and write files</label>
+            <label class="toggle-line"><input id="enableShell" type="checkbox" /> Terminal tool</label>
+            <label class="toggle-line danger"><input id="fullShell" type="checkbox" /> Full shell access</label>
+            <label class="toggle-line"><input id="browserVision" type="checkbox" /> Browser coordinate / vision tools</label>
+            <label class="toggle-line"><input id="browserUsageStatistics" type="checkbox" /> Chrome MCP usage statistics</label>
+            <label class="toggle-line"><input id="startAtLogin" type="checkbox" /> Start MCP Bridge when I sign in</label>
+            <label class="toggle-line"><input id="startLocalOnLaunch" type="checkbox" /> Start Local MCP automatically</label>
+            <label class="toggle-line"><input id="startBrowserOnLaunch" type="checkbox" /> Start Web MCP automatically</label>
+          </div>
+        </article>
+
+        <article class="card span-two">
+          <div class="card-head">
+            <div>
+              <h2>Advanced</h2>
+              <p>Optional custom tunnel-client executable.</p>
+            </div>
+          </div>
+          <label>Custom tunnel-client path
+            <input id="customTunnelClient" placeholder="Leave blank to use the bundled tunnel-client" />
+          </label>
+          <p class="soft-note">Detected: <span id="detectedTunnelClient">—</span></p>
+        </article>
+      </section>
+
+      <div class="save-bar">
+        <div>
+          <strong>Close minimizes to the taskbar.</strong>
+          <span>The tray icon can reopen the app or quit it completely.</span>
+        </div>
+        <div class="save-actions">
+          <span id="message"></span>
+          <button id="save" class="primary-btn">Save settings</button>
+        </div>
       </div>
-    </section>
 
-    <section>
-      <h2>Chrome / Web MCP</h2>
-      <div class="toggles">
-        <label class="check"><input id="browserVision" type="checkbox" /> Coordinate/vision tools</label>
-        <label class="check"><input id="browserUsageStatistics" type="checkbox" /> Allow Chrome MCP usage statistics</label>
-      </div>
-      <p class="hint">For auto-connect, enable Chrome remote debugging at <b>chrome://inspect/#remote-debugging</b>.</p>
-    </section>
-
-    <section>
-      <h2>Startup</h2>
-      <div class="toggles">
-        <label class="check"><input id="startAtLogin" type="checkbox" /> Start app when I sign in</label>
-        <label class="check"><input id="startLocalOnLaunch" type="checkbox" /> Start Local MCP automatically</label>
-        <label class="check"><input id="startBrowserOnLaunch" type="checkbox" /> Start Web MCP automatically</label>
-      </div>
-    </section>
-
-    <section>
-      <h2>Advanced</h2>
-      <label>Custom tunnel-client executable (optional)
-        <input id="customTunnelClient" placeholder="Leave blank to use bundled tunnel-client" />
-      </label>
-      <p class="hint">Detected: <span id="detectedTunnelClient">—</span></p>
-    </section>
-
-    <div class="actions"><button id="save">Save settings</button><span id="message"></span></div>
-
-    <section>
-      <div class="section-head"><div><h2>Logs</h2><p>Runtime output from Local and Web tunnels.</p></div><button id="clearLogs" class="secondary">Clear</button></div>
-      <pre id="logs"></pre>
-    </section>
-
-    <footer>
-      <button class="link" data-url="https://platform.openai.com/settings/organization/tunnels">OpenAI Tunnels</button>
-      <button class="link" data-url="https://platform.openai.com/settings/organization/api-keys">Runtime API Keys</button>
-      <button class="link" data-url="https://chatgpt.com/#settings/Connectors">ChatGPT Plugins</button>
-    </footer>
-  </main>
+      <footer>
+        <button class="text-btn link" data-url="https://platform.openai.com/settings/organization/tunnels">OpenAI Tunnels</button>
+        <button class="text-btn link" data-url="https://platform.openai.com/settings/organization/api-keys">Runtime API Keys</button>
+      </footer>
+    </main>
+  </div>
   <script src="renderer.js"></script>
 </body>
 </html>

@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld('bridge', {
   getState: () => ipcRenderer.invoke('state:get'),
   saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
   chooseFolder: () => ipcRenderer.invoke('folder:choose'),
+  listMountedDrives: () => ipcRenderer.invoke('drives:list'),
+  inspectFolder: (folderPath) => ipcRenderer.invoke('folder:inspect', folderPath),
   startLocal: () => ipcRenderer.invoke('local:start'),
   stopLocal: () => ipcRenderer.invoke('local:stop'),
   startBrowser: () => ipcRenderer.invoke('browser:start'),

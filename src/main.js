@@ -4,6 +4,8 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 
+const stableUserData = path.join(app.getPath('appData'), 'chatgpt-mcp-bridge');
+app.setPath('userData', stableUserData);
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
@@ -17,6 +19,7 @@ if (!gotSingleInstanceLock) {
 }
 
 app.setName('ChatGPT MCP Bridge');
+app.setAppUserModelId('com.advertpreneur.mcpbridge');
 
 
 let win = null;
@@ -95,7 +98,8 @@ async function getPublicState() {
     localRunning: isRunning(localProcess),
     browserRunning: isRunning(browserProcess),
     logs: logs.slice(-200),
-    tunnelClientPath: resolveTunnelClient(false) || ''
+    tunnelClientPath: resolveTunnelClient(false) || '',
+    platform: process.platform
   };
 }
 
@@ -141,12 +145,83 @@ async function writeRootsConfig(settings) {
   const roots = {};
   for (const item of settings.roots || []) {
     if (!item?.path) continue;
-    const name = String(item.name || path.basename(item.path) || 'root').replace(/[^a-zA-Z0-9_-]/g, '_');
-    roots[name] = { path: item.path, mode: item.mode === 'read-only' ? 'read-only' : 'read-write' };
+    let realPath;
+    try {
+      realPath = await fsp.realpath(item.path);
+      await fsp.access(realPath, fs.constants.R_OK);
+    } catch (error) {
+      throw new Error(`Folder is not accessible: ${item.path}. Check that the drive is mounted and your user has permission.`);
+    }
+    const name = String(item.name || path.basename(realPath) || 'root').replace(/[^a-zA-Z0-9_-]/g, '_');
+    roots[name] = { path: realPath, mode: item.mode === 'read-only' ? 'read-only' : 'read-write' };
   }
   if (!Object.keys(roots).length) throw new Error('Add at least one local folder first.');
   await fsp.writeFile(rootsPath(), JSON.stringify({ roots }, null, 2), { mode: 0o600 });
   return rootsPath();
+}
+
+
+function parseLsblkMounts() {
+  if (process.platform !== 'linux') return [];
+  const result = spawnSync('lsblk', ['--json', '--bytes', '--output', 'NAME,LABEL,UUID,SIZE,FSTYPE,TYPE,MOUNTPOINTS'], {
+    encoding: 'utf8',
+    windowsHide: true
+  });
+  if (result.status !== 0 || !result.stdout) return [];
+  try {
+    const data = JSON.parse(result.stdout);
+    const found = [];
+    const walk = (items = []) => {
+      for (const item of items) {
+        const mounts = Array.isArray(item.mountpoints) ? item.mountpoints.filter(Boolean) : [];
+        for (const mountPath of mounts) {
+          if (!/^\/(mnt|media|run\/media)(\/|$)/.test(mountPath)) continue;
+          found.push({
+            id: item.uuid || item.name || mountPath,
+            name: item.label || item.name || path.basename(mountPath),
+            label: item.label || '',
+            uuid: item.uuid || '',
+            path: mountPath,
+            size: Number(item.size || 0),
+            filesystem: item.fstype || '',
+            type: item.type || ''
+          });
+        }
+        if (Array.isArray(item.children)) walk(item.children);
+      }
+    };
+    walk(data.blockdevices || []);
+    return found;
+  } catch {
+    return [];
+  }
+}
+
+async function discoverMountedDrives() {
+  const candidates = parseLsblkMounts();
+  const unique = new Map();
+  for (const item of candidates) {
+    try {
+      const realPath = await fsp.realpath(item.path);
+      await fsp.access(realPath, fs.constants.R_OK);
+      const stat = await fsp.stat(realPath);
+      if (!stat.isDirectory()) continue;
+      unique.set(realPath, { ...item, path: realPath, accessible: true });
+    } catch {
+      unique.set(item.path, { ...item, accessible: false });
+    }
+  }
+  return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function inspectFolder(folderPath) {
+  const realPath = await fsp.realpath(folderPath);
+  await fsp.access(realPath, fs.constants.R_OK);
+  const stat = await fsp.stat(realPath);
+  if (!stat.isDirectory()) throw new Error('Selected path is not a folder.');
+  let writable = true;
+  try { await fsp.access(realPath, fs.constants.W_OK); } catch { writable = false; }
+  return { path: realPath, readable: true, writable };
 }
 
 async function buildLocalCommand(settings) {
@@ -250,22 +325,14 @@ async function restartAll() {
 
 function refreshTrayMenu() {
   if (!tray) return;
+  const localOn = isRunning(localProcess);
+  const webOn = isRunning(browserProcess);
   tray.setContextMenu(Menu.buildFromTemplate([
-    {
-      label: `Local MCP: ${isRunning(localProcess) ? 'ON' : 'OFF'}`,
-      click: () => isRunning(localProcess)
-        ? stopTunnel('local')
-        : startTunnel('local').catch(e => addLog('local', e.message))
-    },
-    {
-      label: `Web MCP: ${isRunning(browserProcess) ? 'ON' : 'OFF'}`,
-      click: () => isRunning(browserProcess)
-        ? stopTunnel('browser')
-        : startTunnel('browser').catch(e => addLog('browser', e.message))
-    },
+    { label: 'Open MCP Bridge', click: showWindow },
     { type: 'separator' },
-    { label: 'Open Dashboard', click: () => showWindow() },
-    { label: 'Restart Running Servers', click: () => restartAll().catch(e => addLog('app', e.message)) },
+    { label: localOn ? 'Stop Local MCP' : 'Start Local MCP', click: () => localOn ? stopTunnel('local') : startTunnel('local').catch(e => addLog('local', e.message)) },
+    { label: webOn ? 'Stop Web MCP' : 'Start Web MCP', click: () => webOn ? stopTunnel('browser') : startTunnel('browser').catch(e => addLog('browser', e.message)) },
+    { label: 'Restart running services', enabled: localOn || webOn, click: () => restartAll().catch(e => addLog('app', e.message)) },
     { type: 'separator' },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } }
   ]));
@@ -281,11 +348,12 @@ function showWindow() {
 
 async function createWindow() {
   win = new BrowserWindow({
-    width: 980,
-    height: 760,
-    minWidth: 820,
-    minHeight: 620,
+    width: 1180,
+    height: 820,
+    minWidth: 960,
+    minHeight: 680,
     show: false,
+    title: 'MCP Bridge',
     icon: path.join(app.getAppPath(), 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -295,10 +363,10 @@ async function createWindow() {
   });
 
   await win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  win.on('close', () => {
+  win.on('close', e => {
     if (!quitting) {
-      quitting = true;
-      app.quit();
+      e.preventDefault();
+      win.minimize();
     }
   });
   win.once('ready-to-show', () => win.show());
@@ -312,6 +380,7 @@ function createTray() {
   );
   tray = new Tray(nativeImage.createFromPath(trayPath));
   tray.setToolTip('ChatGPT MCP Bridge');
+  tray.on('click', showWindow);
   tray.on('double-click', showWindow);
   refreshTrayMenu();
 }
@@ -322,8 +391,11 @@ ipcMain.handle('folder:choose', async () => {
   const result = await dialog.showOpenDialog(win, {
     properties: ['openDirectory', 'createDirectory']
   });
-  return result.canceled ? '' : result.filePaths[0];
+  if (result.canceled || !result.filePaths[0]) return null;
+  return inspectFolder(result.filePaths[0]);
 });
+ipcMain.handle('drives:list', async () => discoverMountedDrives());
+ipcMain.handle('folder:inspect', async (_e, folderPath) => inspectFolder(folderPath));
 
 ipcMain.handle('settings:save', async (_e, incoming) => {
   const existing = await loadSettings();
