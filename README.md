@@ -1,78 +1,85 @@
-# ChatGPT MCP Bridge
+# MCP Bridge
 
-**Use ChatGPT with the files, terminal, and logged-in Chrome session already on your own computer — through OpenAI Secure MCP Tunnel, without exposing a public MCP endpoint.**
+![MCP Bridge icon](docs/images/mcp-bridge-icon.png)
+
+**Securely connect ChatGPT to your local files, terminal, and existing Chrome session through OpenAI Secure MCP Tunnel.**
 
 [Website](https://haseebgb92.github.io/ChatGPT-MCp/) · [Latest Release](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest) · [Glama](https://glama.ai/mcp/servers/haseebgb92/ChatGPT-MCp) · [Security](SECURITY.md) · [Issues](https://github.com/haseebgb92/ChatGPT-MCp/issues)
 
-![ChatGPT MCP Bridge dashboard](docs/images/chatgpt-mcp-bridge-dashboard.png)
+![MCP Bridge dashboard](docs/images/mcp-bridge-dashboard-v0.2.png)
 
-ChatGPT MCP Bridge is a cross-platform desktop/tray app for **Linux and Windows**. It gives ChatGPT two independent local capabilities:
+## What is MCP Bridge?
+
+MCP Bridge is a desktop app for **Linux and Windows** that keeps powerful local tools on your own computer while making them available to ChatGPT through **OpenAI Secure MCP Tunnel**.
+
+It exposes two independent connections:
 
 | Connection | What it does |
 |---|---|
 | **Local MCP** | Browse/search approved folders, read files, optionally create/edit files, and optionally run terminal commands. |
-| **Web MCP** | Control your existing Chrome session with `chrome-devtools-mcp`: tabs, navigation, clicks, typing, screenshots, DevTools inspection, and optional coordinate/vision tools. |
+| **Web MCP** | Control your existing Chrome session through Chrome DevTools MCP: tabs, navigation, clicks, typing, screenshots, console/network inspection, and optional vision tools. |
 
-Your browser session, local files, and shell stay on your machine. ChatGPT reaches the bridge through **OpenAI Secure MCP Tunnel**.
+Your files, browser session, and terminal remain on your machine. MCP Bridge only exposes the roots and capabilities you explicitly allow.
 
-> **Important:** ChatGPT MCP Bridge does not create OpenAI tunnels or API keys for you. You create them in your own OpenAI Platform account and enter them into the app.
+## Highlights in v0.2.1
 
-## Why this exists
-
-Most MCP servers are hosted somewhere else. That is not useful when the thing you want ChatGPT to work with is already on your own PC — your project folders, terminal, development tools, and authenticated Chrome tabs.
-
-ChatGPT MCP Bridge turns that local environment into controlled MCP capabilities while keeping the runtime local.
-
-Typical uses include:
-
-- ask ChatGPT to inspect or update a local project without repeatedly uploading files;
-- let ChatGPT run approved development commands such as `git status`, builds, tests, or ADB commands;
-- work with websites already open and logged in inside your normal Chrome profile;
-- inspect browser console/network output while debugging;
-- keep **Local MCP** and **Web MCP** independently enabled or disabled;
-- expose only the folders and capabilities you actually want to use.
+- Fresh product-level desktop UI
+- Dedicated **Bridge / Gateway** app identity and production icon
+- Proper Linux taskbar/window identity — no longer grouped under ChatGPT
+- System tray controls for Local MCP and Web MCP
+- Closing the window minimizes instead of terminating active tunnels
+- Automatic Linux mounted-drive discovery
+- Friendly labels for external SSDs and mounted volumes
+- Read/write validation before a mounted root is exposed
+- Existing encrypted Runtime API key survives upgrades
+- Built-in **cross-platform update system**
+- SHA-256 verification before an update can be installed
+- Linux `.deb`, Linux AppImage, and Windows NSIS `.exe` releases
+- Local MCP and Web MCP remain completely independent
 
 ## Architecture
 
 ```text
                          OpenAI Secure MCP Tunnel
                                   |
-             +--------------------+--------------------+
-             |                                         |
-      Local Files app                            Chrome app
-             |                                         |
-             v                                         v
-      ChatGPT MCP Bridge ---------------------- ChatGPT MCP Bridge
-             |                                         |
-        Local MCP                               Chrome DevTools MCP
-       /    |    \                                      |
-   files  folders  optional shell                existing Chrome
+                  +---------------+---------------+
+                  |                               |
+              Local MCP                        Web MCP
+                  |                               |
+          approved local roots              Chrome DevTools MCP
+         /        |        \                       |
+      files    folders    shell               existing Chrome
+                  \                               /
+                   +--------- MCP Bridge --------+
+                             Linux / Windows
 ```
 
-There is no need to expose a local MCP port directly to the public internet.
+No public local MCP port needs to be exposed directly to the internet.
 
 ## Quick start
 
-### 1. Install the bridge
+### 1. Install MCP Bridge
 
 #### Linux
 
-Current packages target **Debian / Ubuntu / Linux Mint on amd64/x86_64**.
+Current packaged releases target Debian / Ubuntu / Linux Mint on amd64/x86_64.
 
 ```bash
-curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-linux.sh?ref=main" | bash
+curl -fsSL -H "Accept: application/vnd.github.raw+json" \
+  "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-linux.sh?ref=main" | bash
 ```
 
-If you already have Chrome/Chromium and do not want the installer to install Google Chrome:
+If Chrome/Chromium is already installed:
 
 ```bash
-curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-linux.sh?ref=main" | SKIP_CHROME=1 bash
+curl -fsSL -H "Accept: application/vnd.github.raw+json" \
+  "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-linux.sh?ref=main" | SKIP_CHROME=1 bash
 ```
 
-Or download the latest `.deb` manually from [GitHub Releases](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest):
+Or download the latest `.deb` from [GitHub Releases](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest):
 
 ```bash
-sudo apt install ./ChatGPT-MCP-Bridge*.deb
+sudo apt install ./MCP-Bridge-*-linux-amd64.deb
 ```
 
 #### Windows
@@ -80,31 +87,36 @@ sudo apt install ./ChatGPT-MCP-Bridge*.deb
 Open PowerShell:
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass -Force; irm "https://raw.githubusercontent.com/haseebgb92/ChatGPT-MCp/main/install-windows.ps1" | iex
+Set-ExecutionPolicy -Scope Process Bypass -Force
+irm "https://raw.githubusercontent.com/haseebgb92/ChatGPT-MCp/main/install-windows.ps1" | iex
 ```
 
-Or download the latest Windows `.exe` installer from [GitHub Releases](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest).
+Or download the latest Windows `.exe` from [GitHub Releases](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest).
 
 ### 2. Create two OpenAI tunnels
 
 Open:
 
+```text
 https://platform.openai.com/settings/organization/tunnels
+```
 
-Create two separate tunnel IDs:
+Create separate tunnel IDs for Local MCP and Web MCP.
 
 ```text
 Local Files
 Chrome
 ```
 
-Use a different tunnel ID for Local MCP and Web MCP if both will run at the same time.
+Use different tunnel IDs when both services will run at the same time.
 
 ### 3. Create a Runtime API key
 
 Open:
 
+```text
 https://platform.openai.com/settings/organization/api-keys
+```
 
 For least privilege, use a restricted key whose principal has:
 
@@ -113,34 +125,26 @@ Tunnels: Read
 Tunnels: Use
 ```
 
-Do **not** use an OpenAI Admin API key as the long-running tunnel Runtime API key.
+Do **not** use an OpenAI Admin API key as the long-running Runtime API key.
 
-When **Remember API key securely** is enabled, the bridge stores it using Electron `safeStorage` / the operating system's credential encryption rather than putting the secret directly into normal settings.
+When **Remember API key securely** is enabled, MCP Bridge stores it through Electron `safeStorage` / operating-system credential encryption instead of normal settings.
 
-### 4. Configure the desktop app
+### 4. Configure MCP Bridge
 
-Enter:
+1. Enter the Runtime API key.
+2. Enter the Local tunnel ID.
+3. Enter the Web tunnel ID.
+4. Add one or more approved folders.
+5. Choose read-only or read/write access per root.
+6. Enable file writing only if needed.
+7. Enable terminal access only if needed.
+8. Enable Browser vision tools if needed.
+9. Optionally start MCP Bridge at OS login.
+10. Start Local MCP, Web MCP, or both.
 
-1. Runtime API key
-2. Local tunnel ID
-3. Web tunnel ID
-4. One or more allowed local folders
-5. Read-only/read-write mode per folder
-6. Whether Local MCP may write files
-7. Whether Local MCP may run terminal commands
-8. Whether Web MCP coordinate/vision tools are enabled
-9. Optional auto-start at login
+### 5. Add the connections in ChatGPT
 
-Then start either or both services:
-
-```text
-Local MCP   ON
-Web MCP     ON
-```
-
-### 5. Add the MCP connections in ChatGPT
-
-In ChatGPT, enable **Developer mode** under **Settings → Security and login**, then open **Plugins** and create MCP connections using **Tunnel** as the connection method. Availability can depend on account/workspace policy.
+In ChatGPT, enable Developer mode and add MCP connections using **Tunnel** as the connection method.
 
 Local connection:
 
@@ -158,43 +162,97 @@ Connection: Tunnel
 Tunnel: <your Web tunnel ID>
 ```
 
-Start the matching service in ChatGPT MCP Bridge before refreshing/scanning its tools in ChatGPT.
+Start the matching service in MCP Bridge before refreshing/scanning its tools in ChatGPT.
 
-## What gets installed
+## Mounted drives on Linux
 
-Packaged releases include the runtime pieces needed by the bridge:
+MCP Bridge automatically discovers mounted filesystems under common Linux mount locations such as:
 
-- Desktop tray app
-- Local MCP server
-- Chrome DevTools MCP
-- Electron/Node runtime
-- Full OpenAI `tunnel-client`
+```text
+/mnt
+/media/<user>
+/run/media/<user>
+```
 
-You do **not** need to manually install Node.js, npm, Go, the MCP SDK, Chrome DevTools MCP, or `tunnel-client` when using a packaged release.
+Instead of making you work with an opaque mount path such as:
 
-On supported Linux systems, the one-command installer also installs required system packages and installs Google Chrome Stable automatically if Chrome/Chromium is not already available.
+```text
+/mnt/289E678E9E6752FC
+```
+
+the UI can show the volume label, filesystem, size, and actual mount path.
+
+Before a mounted root is exposed, MCP Bridge resolves the real path and confirms that the current user can read it. Read/write roots are also checked for write access.
+
+This makes external SSDs and secondary drives first-class without weakening the Local MCP path-security model.
+
+## Desktop experience
+
+- Dedicated app and tray icon
+- Separate Linux `WM_CLASS` / desktop identity
+- Click **X** to minimize instead of killing active tunnels
+- Tray menu to reopen the app
+- Start/stop Local MCP from the tray
+- Start/stop Web MCP from the tray
+- Restart running services
+- Explicit **Quit** when you want the bridge terminated
+- Optional launch at login
+- Optional automatic Local/Web startup
+- Runtime activity logs
+
+## Built-in updates
+
+Starting with **v0.2.1**, MCP Bridge can update itself from GitHub Releases.
+
+### Update flow
+
+1. Check the latest GitHub Release.
+2. Compare semantic versions.
+3. Select the correct installer for the current OS and architecture.
+4. Download the installer locally.
+5. Download the matching `.sha256` file.
+6. Verify the installer before installation is enabled.
+7. You explicitly choose **Install & restart**.
+
+Automatic checks happen shortly after launch and then periodically. They can be disabled in Settings.
+
+### Linux
+
+```text
+download → SHA-256 verify → pkexec → apt install → relaunch MCP Bridge
+```
+
+The system elevation dialog is used. MCP Bridge does not store your sudo password.
+
+### Windows
+
+```text
+download NSIS .exe → SHA-256 verify → launch installer → MCP Bridge exits
+```
+
+Updates are **not silently installed**.
 
 ## Local MCP
 
 ### Files and folders
 
-- Multiple allowed local roots
-- Read-only/read-write mode per folder
-- List files and folders
-- Inspect file metadata
+- Multiple approved roots
+- Read-only/read/write mode per root
+- Mounted Linux drive support
+- List files and directories
+- File metadata
 - Read UTF-8 text files
 - Recursive filename/content search
 - Create folders
 - Create or replace text files
-- Filesystem path traversal/symlink checks
+- Real-path and traversal protection
+- Symlink escape protection
 
 ### Shell
 
 Terminal execution is optional.
 
-#### Restricted shell
-
-Designed for common development work while blocking several obvious destructive/system-level commands.
+Restricted shell supports normal development work while blocking several obvious destructive/system-level commands.
 
 Examples:
 
@@ -211,25 +269,24 @@ adb devices
 
 Restricted shell is a guardrail, **not** a complete OS sandbox.
 
-#### Full shell
-
 Full shell executes Bash on Linux or PowerShell on Windows with the current user's privileges.
 
 > **Treat Full Shell as local-user-equivalent code execution. Enable it only for a machine and MCP connection you trust.**
 
 ## Web MCP / Chrome
 
-Web MCP uses `chrome-devtools-mcp` and your **existing Chrome session**, so ChatGPT can work with tabs and authenticated sessions already open on your computer.
+Web MCP uses `chrome-devtools-mcp` with your **existing Chrome session**, so ChatGPT can work with tabs and authenticated sessions already open on your computer.
 
 Capabilities include:
 
-- navigate/open/close/select tabs;
-- click, hover, type, fill forms, and send keyboard input;
-- screenshots and accessibility snapshots;
-- console and network inspection;
-- performance/Lighthouse tooling;
-- optional coordinate/vision tools;
-- optional usage-statistics opt-out.
+- list/select/open/close tabs
+- navigation
+- click, hover, typing, forms, and keyboard input
+- screenshots and accessibility snapshots
+- console and network inspection
+- performance tooling
+- optional coordinate/vision tools
+- optional usage-statistics opt-out
 
 ### Chrome setup
 
@@ -239,52 +296,42 @@ Open:
 chrome://inspect/#remote-debugging
 ```
 
-Enable remote debugging for your local Chrome profile.
+Enable remote debugging for the Chrome profile you want MCP Bridge to use.
 
-When **Coordinate/vision tools** is enabled, ChatGPT MCP Bridge launches Chrome DevTools MCP with:
+When Browser vision tools are enabled, MCP Bridge launches Chrome DevTools MCP with:
 
 ```text
 --experimentalVision
 ```
 
-## Desktop app
+## Packaged releases include
 
-- Linux and Windows
-- System tray/taskbar controls
-- Start/stop Local MCP independently
-- Start/stop Web MCP independently
-- Restart running services
-- Optional launch at OS login
-- Optional MCP auto-start
-- Runtime logs
-- Secure Runtime API-key storage
-- Bundled full OpenAI `tunnel-client` in packaged releases
+- MCP Bridge desktop app
+- Local MCP server
+- Chrome DevTools MCP
+- Electron/Node runtime
+- Full OpenAI `tunnel-client`
+- Production app/tray icons
 
-## Windows installer details
+You do **not** need to manually install Node.js, npm, Go, the MCP SDK, Chrome DevTools MCP, or `tunnel-client` when using an official packaged release.
 
-The PowerShell installer can:
+## Release artifacts
 
-1. install Git if missing;
-2. install Node.js LTS if missing;
-3. install Go if missing;
-4. download ChatGPT MCP Bridge;
-5. install npm dependencies;
-6. build the full OpenAI `tunnel-client.exe`;
-7. validate the application;
-8. build the Windows installer;
-9. launch the generated installer.
+| Platform | Artifact |
+|---|---|
+| Linux | `MCP-Bridge-<version>-linux-amd64.deb` |
+| Linux | `MCP-Bridge-<version>-linux-x86_64.AppImage` |
+| Windows | `MCP-Bridge-<version>-win-x64.exe` |
 
-If `raw.githubusercontent.com` is stale or blocked on your network:
+Every installer also has a matching:
 
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass -Force
-$script = Invoke-RestMethod -Headers @{ Accept = "application/vnd.github.raw+json" } -Uri "https://api.github.com/repos/haseebgb92/ChatGPT-MCp/contents/install-windows.ps1?ref=main"
-Invoke-Expression $script
+```text
+<installer>.sha256
 ```
 
-## Build from source
+The built-in updater refuses to install an update if its checksum is missing or does not match.
 
-Source builds are mainly for contributors. Packaged releases are easier for normal use.
+## Build from source
 
 ### Linux
 
@@ -304,33 +351,9 @@ npm install
 npm start
 ```
 
-A source/development run expects a full `tunnel-client` either on PATH or selected in the app's Advanced settings.
+A development run expects a full `tunnel-client` either on PATH or selected in Advanced settings.
 
-## Building installers
-
-GitHub Actions is configured in:
-
-```text
-.github/workflows/build.yml
-```
-
-Version tags build and publish:
-
-| Platform | Artifacts |
-|---|---|
-| Linux | `.deb`, `.AppImage` |
-| Windows | NSIS `.exe` |
-
-The workflow also compiles and bundles the full OpenAI `tunnel-client`.
-
-Example release:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-## Local development
+## Build installers
 
 ```bash
 npm install
@@ -349,21 +372,23 @@ Windows:
 npm run dist:win
 ```
 
-Build output is written to `dist/`.
+GitHub Actions builds the official release artifacts and SHA-256 sidecars from version tags.
 
 ## Security
 
-This project deliberately exposes powerful local capabilities, so use the smallest access level that fits the task.
+MCP Bridge deliberately exposes powerful local capabilities, so use the smallest access level that fits the task.
 
 - Never commit Runtime API keys.
 - Prefer a restricted Runtime API key.
 - Use separate tunnel IDs for Local and Web MCP.
 - Prefer read-only roots unless write access is required.
-- Enable shell only when needed.
+- Mounted roots are real-path checked before use.
+- Enable shell only when required.
 - Full shell is not a sandbox.
 - Chrome MCP can act inside logged-in browser sessions.
 - Review consequential actions before allowing them.
-- The app redacts OpenAI-style `sk-` keys from runtime logs.
+- Runtime logs redact OpenAI-style `sk-` keys.
+- Update installers are SHA-256 verified before installation.
 
 See [SECURITY.md](SECURITY.md) for details.
 
@@ -375,22 +400,27 @@ See [SECURITY.md](SECURITY.md) for details.
 ├── assets/
 ├── bundled/
 │   └── local-mcp/
+├── docs/
+│   └── images/
 ├── install-linux.sh
+├── install-windows.ps1
 ├── src/
 │   ├── main.js
 │   ├── preload.js
+│   ├── updater.js
 │   └── renderer/
-├── .gitignore
 ├── LICENSE
 ├── package.json
 └── README.md
 ```
 
-## Current status
+## Current release
 
-**v0.1.3**
+**v0.2.1**
 
-The current release focuses on making Local MCP and Chrome MCP simple to run from a tray app on Linux and Windows.
+This release adds the verified cross-platform updater on top of the v0.2.0 redesign, standalone desktop identity, tray workflow, and Linux mounted-drive support.
+
+[Download the latest release](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest)
 
 ## License
 
