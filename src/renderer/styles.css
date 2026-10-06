@@ -144,3 +144,11 @@ footer{display:flex;gap:14px;padding:18px 4px 4px}
   .content{padding:22px 16px}.hero{flex-direction:column}.stats-grid{grid-template-columns:1fr}.root-row{grid-template-columns:1fr}.field-grid{grid-template-columns:1fr}
   .save-bar{align-items:flex-start;flex-direction:column}.save-actions{width:100%;justify-content:space-between}
 }
+.update-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:start}
+.update-actions{display:flex;gap:9px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.update-progress-wrap{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:10px;align-items:center;margin-top:14px}
+.update-progress-track{height:8px;border-radius:999px;background:#e9edf5;overflow:hidden}
+.update-progress-bar{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#336dff,#7758f6);transition:width .2s ease}
+#updateProgressLabel{font-size:10px;color:#6d7b90;text-align:right}
+button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:760px){.update-layout{grid-template-columns:1fr}.update-actions{justify-content:flex-start}}

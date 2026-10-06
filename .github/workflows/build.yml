@@ -74,14 +74,33 @@ jobs:
         if: matrix.target == 'win'
         run: npm run dist:win
 
+      - name: Create SHA-256 checksums (Linux)
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          for f in dist/*.deb dist/*.AppImage; do
+            [ -f "$f" ] || continue
+            sha256sum "$f" > "$f.sha256"
+          done
+
+      - name: Create SHA-256 checksums (Windows)
+        if: matrix.target == 'win'
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -Filter *.exe -File | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content -NoNewline "$($_.FullName).sha256"
+          }
+
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
-          name: ChatGPT-MCP-Bridge-${{ matrix.target }}
+          name: MCP-Bridge-${{ matrix.target }}
           path: |
             dist/*.AppImage
             dist/*.deb
             dist/*.exe
+            dist/*.sha256
           if-no-files-found: error
 
   release:
@@ -105,3 +124,4 @@ jobs:
             release-assets/*.deb
             release-assets/*.AppImage
             release-assets/*.exe
+            release-assets/*.sha256

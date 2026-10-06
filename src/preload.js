@@ -11,7 +11,12 @@ contextBridge.exposeInMainWorld('bridge', {
   startBrowser: () => ipcRenderer.invoke('browser:start'),
   stopBrowser: () => ipcRenderer.invoke('browser:stop'),
   restartAll: () => ipcRenderer.invoke('servers:restart-all'),
+  checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
+  getUpdateState: () => ipcRenderer.invoke('update:get-state'),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   onState: (cb) => ipcRenderer.on('state:update', (_e, state) => cb(state)),
-  onLog: (cb) => ipcRenderer.on('log:update', (_e, line) => cb(line))
+  onLog: (cb) => ipcRenderer.on('log:update', (_e, line) => cb(line)),
+  onUpdateState: (cb) => ipcRenderer.on('update:state', (_e, state) => cb(state))
 });

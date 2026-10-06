@@ -211,6 +211,36 @@
           </div>
         </article>
 
+        <article class="card span-two update-card">
+          <div class="card-head">
+            <div>
+              <h2>Updates</h2>
+              <p>Keep MCP Bridge current on Linux and Windows.</p>
+            </div>
+            <span id="updateBadge" class="status-pill">Not checked</span>
+          </div>
+
+          <div class="update-layout">
+            <div class="update-copy">
+              <div class="info-row"><span>Current version</span><strong id="currentVersion">—</strong></div>
+              <div class="info-row"><span>Latest release</span><strong id="latestVersion">—</strong></div>
+              <div class="info-row"><span>Status</span><strong id="updateStatusText">Updates have not been checked yet.</strong></div>
+              <label class="toggle-line"><input id="automaticUpdateChecks" type="checkbox" /> Check for updates automatically</label>
+            </div>
+            <div class="update-actions">
+              <button id="checkUpdates" class="outline-btn">Check for updates</button>
+              <button id="downloadUpdate" class="primary-btn" hidden>Download update</button>
+              <button id="installUpdate" class="primary-btn" hidden>Install & restart</button>
+            </div>
+          </div>
+
+          <div id="updateProgressWrap" class="update-progress-wrap" hidden>
+            <div class="update-progress-track"><div id="updateProgressBar" class="update-progress-bar"></div></div>
+            <span id="updateProgressLabel">0%</span>
+          </div>
+          <p class="soft-note">Downloads are verified with the SHA-256 checksum published with each GitHub Release before installation is allowed.</p>
+        </article>
+
         <article class="card span-two">
           <div class="card-head">
             <div>

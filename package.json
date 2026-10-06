@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-mcp-bridge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Cross-platform tray manager for ChatGPT Secure MCP Tunnel: Local Files + Chrome DevTools MCP.",
   "main": "src/main.js",
   "author": {
@@ -19,7 +19,7 @@
   "homepage": "https://github.com/haseebgb92/ChatGPT-MCp#readme",
   "scripts": {
     "start": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/renderer.js && node --check bundled/local-mcp/server.js && node --check bundled/local-mcp/config.js && node --check bundled/local-mcp/security.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/updater.js && node --check src/renderer/renderer.js && node --check bundled/local-mcp/server.js && node --check bundled/local-mcp/config.js && node --check bundled/local-mcp/security.js",
     "dist:linux": "electron-builder --linux AppImage deb --publish never",
     "dist:win": "electron-builder --win nsis --publish never",
     "dist:linux:deb": "electron-builder --linux deb --publish never"

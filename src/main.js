@@ -3,6 +3,7 @@ const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
+const { checkForUpdate, downloadAndVerify, installUpdate } = require('./updater');
 
 const stableUserData = path.join(app.getPath('appData'), 'chatgpt-mcp-bridge');
 app.setPath('userData', stableUserData);
@@ -29,6 +30,18 @@ let localProcess = null;
 let browserProcess = null;
 let sessionApiKey = '';
 let logs = [];
+let updateCheckTimer = null;
+let updateInitialTimer = null;
+let updateState = {
+  status: 'idle',
+  currentVersion: app.getVersion(),
+  latestVersion: null,
+  available: false,
+  progress: null,
+  message: 'Updates have not been checked yet.',
+  info: null,
+  downloadedInstaller: null
+};
 
 const defaultSettings = {
   localTunnelId: '',
@@ -43,7 +56,8 @@ const defaultSettings = {
   startLocalOnLaunch: false,
   startBrowserOnLaunch: false,
   startAtLogin: false,
-  customTunnelClient: ''
+  customTunnelClient: '',
+  automaticUpdateChecks: true
 };
 
 function configPath() { return path.join(app.getPath('userData'), 'settings.json'); }
@@ -99,8 +113,138 @@ async function getPublicState() {
     browserRunning: isRunning(browserProcess),
     logs: logs.slice(-200),
     tunnelClientPath: resolveTunnelClient(false) || '',
-    platform: process.platform
+    platform: process.platform,
+    appVersion: app.getVersion(),
+    update: updateState
   };
+}
+
+
+function emitUpdateState() {
+  win?.webContents.send('update:state', updateState);
+  broadcastState();
+}
+
+function setUpdateState(patch) {
+  updateState = { ...updateState, ...patch };
+  emitUpdateState();
+}
+
+async function performUpdateCheck({ silent = false } = {}) {
+  if (updateState.status === 'checking' || updateState.status === 'downloading' || updateState.status === 'installing') {
+    return updateState;
+  }
+  setUpdateState({
+    status: 'checking',
+    currentVersion: app.getVersion(),
+    progress: null,
+    message: silent ? 'Checking for updates…' : 'Checking GitHub Releases…'
+  });
+  try {
+    const info = await checkForUpdate(app.getVersion(), process.platform, process.arch);
+    if (info.available) {
+      setUpdateState({
+        status: 'available',
+        latestVersion: info.latestVersion,
+        available: true,
+        info,
+        downloadedInstaller: null,
+        message: `MCP Bridge ${info.latestVersion} is available.`
+      });
+    } else {
+      setUpdateState({
+        status: 'up-to-date',
+        latestVersion: info.latestVersion || app.getVersion(),
+        available: false,
+        info,
+        progress: null,
+        message: `MCP Bridge ${app.getVersion()} is up to date.`
+      });
+    }
+  } catch (error) {
+    setUpdateState({
+      status: 'error',
+      progress: null,
+      message: `Update check failed: ${error.message}`
+    });
+  }
+  return updateState;
+}
+
+async function performUpdateDownload() {
+  const info = updateState.info;
+  if (!info?.available) throw new Error('No update is currently available.');
+  if (!info.asset) throw new Error('No compatible installer was published for this operating system.');
+  setUpdateState({
+    status: 'downloading',
+    progress: { received: 0, total: info.asset.size || 0, percent: 0 },
+    message: `Downloading ${info.asset.name}…`
+  });
+
+  try {
+    const updatesDir = path.join(app.getPath('userData'), 'updates');
+    const result = await downloadAndVerify(info, updatesDir, progress => {
+      updateState = {
+        ...updateState,
+        status: 'downloading',
+        progress,
+        message: progress.percent == null
+          ? 'Downloading update…'
+          : `Downloading update… ${progress.percent}%`
+      };
+      win?.webContents.send('update:state', updateState);
+    });
+    setUpdateState({
+      status: 'ready',
+      progress: { ...updateState.progress, percent: 100 },
+      downloadedInstaller: result.installerPath,
+      message: `Update ${info.latestVersion} is downloaded and verified.`
+    });
+  } catch (error) {
+    setUpdateState({
+      status: 'error',
+      progress: null,
+      downloadedInstaller: null,
+      message: `Update download failed: ${error.message}`
+    });
+  }
+  return updateState;
+}
+
+async function performUpdateInstall() {
+  if (!updateState.downloadedInstaller) throw new Error('Download the update first.');
+  setUpdateState({ status: 'installing', message: 'Launching the verified installer…' });
+  try {
+    installUpdate(process.platform, updateState.downloadedInstaller, { relaunchPath: process.execPath });
+    addLog('updater', `Launching update installer for ${updateState.latestVersion || 'new version'}.`);
+    setTimeout(() => {
+      quitting = true;
+      app.quit();
+    }, 700);
+    return { ok: true };
+  } catch (error) {
+    setUpdateState({ status: 'error', message: `Could not launch installer: ${error.message}` });
+    throw error;
+  }
+}
+
+function scheduleUpdateChecks() {
+  if (updateInitialTimer) {
+    clearTimeout(updateInitialTimer);
+    updateInitialTimer = null;
+  }
+  if (updateCheckTimer) {
+    clearInterval(updateCheckTimer);
+    updateCheckTimer = null;
+  }
+  loadSettings().then(settings => {
+    if (!settings.automaticUpdateChecks) return;
+    updateInitialTimer = setTimeout(() => {
+      updateInitialTimer = null;
+      performUpdateCheck({ silent: true });
+    }, 15000);
+    updateCheckTimer = setInterval(() => performUpdateCheck({ silent: true }), 6 * 60 * 60 * 1000);
+  }).catch(() => {});
 }
 
 async function broadcastState() {
@@ -334,6 +478,16 @@ function refreshTrayMenu() {
     { label: webOn ? 'Stop Web MCP' : 'Start Web MCP', click: () => webOn ? stopTunnel('browser') : startTunnel('browser').catch(e => addLog('browser', e.message)) },
     { label: 'Restart running services', enabled: localOn || webOn, click: () => restartAll().catch(e => addLog('app', e.message)) },
     { type: 'separator' },
+    {
+      label: updateState.available
+        ? `Update to ${updateState.latestVersion}`
+        : 'Check for updates',
+      click: () => {
+        showWindow();
+        performUpdateCheck().catch(e => addLog('updater', e.message));
+      }
+    },
+    { type: 'separator' },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } }
   ]));
 }
@@ -425,6 +579,7 @@ ipcMain.handle('settings:save', async (_e, incoming) => {
   });
 
   addLog('app', 'Settings saved.');
+  scheduleUpdateChecks();
   await broadcastState();
   return { ok: true };
 });
@@ -449,6 +604,11 @@ ipcMain.handle('servers:restart-all', async () => {
   await restartAll();
   return { ok: true };
 });
+ipcMain.handle('update:check', async () => performUpdateCheck());
+ipcMain.handle('update:download', async () => performUpdateDownload());
+ipcMain.handle('update:install', async () => performUpdateInstall());
+ipcMain.handle('update:get-state', async () => updateState);
+
 ipcMain.handle('open:external', async (_e, url) => {
   if (/^https:\/\//i.test(url)) await shell.openExternal(url);
 });
@@ -469,11 +629,14 @@ app.whenReady().then(async () => {
   if (settings.startBrowserOnLaunch) {
     startTunnel('browser').catch(e => addLog('browser', e.message));
   }
+  scheduleUpdateChecks();
 });
 
 app.on('window-all-closed', () => {});
 app.on('before-quit', () => {
   quitting = true;
+  if (updateInitialTimer) clearTimeout(updateInitialTimer);
+  if (updateCheckTimer) clearInterval(updateCheckTimer);
   stopTunnel('local');
   stopTunnel('browser');
 });

@@ -32,6 +32,44 @@ function setServicePill(id, running) {
   el.classList.toggle('on', running);
 }
 
+
+function renderUpdateState(update) {
+  if (!update) return;
+  $('currentVersion').textContent = update.currentVersion || state?.appVersion || '—';
+  $('latestVersion').textContent = update.latestVersion || '—';
+  $('updateStatusText').textContent = update.message || 'Updates have not been checked yet.';
+
+  const badge = $('updateBadge');
+  const labels = {
+    idle: 'Not checked',
+    checking: 'Checking…',
+    available: 'Update available',
+    downloading: 'Downloading…',
+    ready: 'Ready',
+    installing: 'Installing…',
+    error: 'Error',
+    'up-to-date': 'Up to date'
+  };
+  badge.textContent = labels[update.status] || update.status || 'Unknown';
+  badge.classList.toggle('good', update.status === 'up-to-date' || update.status === 'ready');
+  badge.classList.toggle('on', update.status === 'available' || update.status === 'downloading');
+
+  $('checkUpdates').disabled = ['checking','downloading','installing'].includes(update.status);
+  $('downloadUpdate').hidden = update.status !== 'available';
+  $('installUpdate').hidden = update.status !== 'ready';
+
+  const progress = update.progress;
+  const wrap = $('updateProgressWrap');
+  if (update.status === 'downloading' || update.status === 'ready') {
+    wrap.hidden = false;
+    const percent = progress?.percent ?? (update.status === 'ready' ? 100 : 0);
+    $('updateProgressBar').style.width = `${Math.max(0, Math.min(100, percent || 0))}%`;
+    $('updateProgressLabel').textContent = percent == null ? 'Downloading…' : `${percent}%`;
+  } else {
+    wrap.hidden = true;
+  }
+}
+
 function setStatus(s) {
   state = s;
   const cfg = s.settings || {};
@@ -62,6 +100,7 @@ function setStatus(s) {
   $('detectedTunnelClient').textContent = s.tunnelClientPath || 'Not found';
   $('clientStatus').textContent = s.tunnelClientPath ? 'Detected' : 'Not found';
   $('visionStatus').textContent = cfg.browserVision ? 'Enabled' : 'Disabled';
+  renderUpdateState(s.update);
   $('statsStatus').textContent = cfg.browserUsageStatistics ? 'Enabled' : 'Disabled';
 
   if (!$('localTunnelId').dataset.dirty) $('localTunnelId').value = cfg.localTunnelId || '';
@@ -187,7 +226,7 @@ async function load() {
   const cfg = state.settings || {};
   roots = Array.isArray(cfg.roots) ? JSON.parse(JSON.stringify(cfg.roots)) : [];
 
-  ['rememberApiKey','enableWrite','enableShell','fullShell','browserVision','browserUsageStatistics','startAtLogin','startLocalOnLaunch','startBrowserOnLaunch']
+  ['rememberApiKey','enableWrite','enableShell','fullShell','browserVision','browserUsageStatistics','startAtLogin','startLocalOnLaunch','startBrowserOnLaunch','automaticUpdateChecks']
     .forEach(id => $(id).checked = Boolean(cfg[id]));
 
   $('customTunnelClient').value = cfg.customTunnelClient || '';
@@ -217,6 +256,21 @@ $('addFolder').onclick = async () => {
 };
 
 $('refreshDrives').onclick = loadMountedDrives;
+$('checkUpdates').onclick = async () => {
+  try { renderUpdateState(await window.bridge.checkForUpdates()); }
+  catch (e) { $('message').textContent = e.message || String(e); }
+};
+
+$('downloadUpdate').onclick = async () => {
+  try { renderUpdateState(await window.bridge.downloadUpdate()); }
+  catch (e) { $('message').textContent = e.message || String(e); }
+};
+
+$('installUpdate').onclick = async () => {
+  try { await window.bridge.installUpdate(); }
+  catch (e) { $('message').textContent = e.message || String(e); }
+};
+
 
 $('save').onclick = async () => {
   try {
@@ -235,6 +289,7 @@ $('save').onclick = async () => {
       startAtLogin: $('startAtLogin').checked,
       startLocalOnLaunch: $('startLocalOnLaunch').checked,
       startBrowserOnLaunch: $('startBrowserOnLaunch').checked,
+      automaticUpdateChecks: $('automaticUpdateChecks').checked,
       customTunnelClient: $('customTunnelClient').value.trim()
     };
     await window.bridge.saveSettings(settings);
@@ -283,6 +338,8 @@ document.querySelectorAll('.nav-item').forEach(button => {
 window.bridge.onState(next => {
   setStatus(next);
 });
+
+window.bridge.onUpdateState(renderUpdateState);
 
 window.bridge.onLog(line => {
   const log = $('logs');
