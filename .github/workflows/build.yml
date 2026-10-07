@@ -40,6 +40,26 @@ jobs:
       - name: Install app dependencies
         run: npm ci
 
+      - name: Bundle dedicated Node runtime (Linux)
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          rm -rf vendor/node-runtime
+          mkdir -p vendor/node-runtime
+          cp "$(command -v node)" vendor/node-runtime/node
+          chmod +x vendor/node-runtime/node
+          vendor/node-runtime/node --version
+
+      - name: Bundle dedicated Node runtime (Windows)
+        if: matrix.target == 'win'
+        shell: pwsh
+        run: |
+          if (Test-Path vendor/node-runtime) { Remove-Item -Recurse -Force vendor/node-runtime }
+          New-Item -ItemType Directory -Force -Path vendor/node-runtime | Out-Null
+          $node = (Get-Command node).Source
+          Copy-Item $node vendor/node-runtime/node.exe
+          & vendor/node-runtime/node.exe --version
+
       - name: Build full OpenAI tunnel-client (Linux)
         if: matrix.target == 'linux'
         shell: bash
@@ -78,27 +98,20 @@ jobs:
         if: matrix.target == 'linux'
         shell: bash
         run: |
-          test -x dist/linux-unpacked/mcp-bridge
-          OUTPUT="$(ELECTRON_RUN_AS_NODE=1 dist/linux-unpacked/mcp-bridge -e 'process.stdout.write(process.versions.node || "")')"
+          test -x dist/linux-unpacked/resources/node-runtime/node
+          OUTPUT="$(dist/linux-unpacked/resources/node-runtime/node -p 'process.versions.node')"
           test -n "$OUTPUT"
-          echo "Packaged Electron RunAsNode OK: Node $OUTPUT"
+          echo "Bundled Node runtime OK: Node $OUTPUT"
 
       - name: Verify packaged Node runtime (Windows)
         if: matrix.target == 'win'
         shell: pwsh
         run: |
-          $exe = "dist/win-unpacked/MCP Bridge.exe"
-          $probe = Join-Path $env:RUNNER_TEMP "mcp-bridge-node-version.txt"
-          $probeScript = Join-Path $env:RUNNER_TEMP "mcp-bridge-node-probe.js"
-          if (-not (Test-Path $exe)) { throw "Packaged executable not found: $exe" }
-          Set-Content -Path $probeScript -Value "require('fs').writeFileSync(process.argv[2], process.versions.node || '')" -NoNewline
-          $env:ELECTRON_RUN_AS_NODE = "1"
-          $proc = Start-Process -FilePath $exe -ArgumentList @($probeScript, $probe) -Wait -PassThru -NoNewWindow
-          if ($proc.ExitCode -ne 0) { throw "Packaged Electron Node probe exited with code $($proc.ExitCode)." }
-          if (-not (Test-Path $probe)) { throw "Packaged Electron did not run as Node." }
-          $output = (Get-Content $probe -Raw).Trim()
-          if ([string]::IsNullOrWhiteSpace($output)) { throw "Packaged Electron returned an empty Node version." }
-          Write-Host "Packaged Electron RunAsNode OK: Node $output"
+          $exe = "dist/win-unpacked/resources/node-runtime/node.exe"
+          if (-not (Test-Path $exe)) { throw "Bundled Node runtime not found: $exe" }
+          $output = & $exe -p "process.versions.node"
+          if ([string]::IsNullOrWhiteSpace($output)) { throw "Bundled Node runtime returned no version." }
+          Write-Host "Bundled Node runtime OK: Node $output"
 
       - name: Create SHA-256 checksums (Linux)
         if: matrix.target == 'linux'
