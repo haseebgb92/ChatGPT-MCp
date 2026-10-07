@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-mcp-bridge",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Cross-platform tray manager for ChatGPT Secure MCP Tunnel: Local Files + Chrome DevTools MCP.",
   "main": "src/main.js",
   "author": {
@@ -91,7 +91,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
-    "artifactName": "MCP-Bridge-${version}-${os}-${arch}.${ext}"
+    "artifactName": "MCP-Bridge-${version}-${os}-${arch}.${ext}",
+    "electronFuses": {
+      "runAsNode": true
+    }
   },
   "desktopName": "mcp-bridge.desktop"
 }
