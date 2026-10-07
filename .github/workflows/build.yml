@@ -91,9 +91,12 @@ jobs:
         run: |
           $exe = "dist/win-unpacked/MCP Bridge.exe"
           $probe = Join-Path $env:RUNNER_TEMP "mcp-bridge-node-version.txt"
+          $probeScript = Join-Path $env:RUNNER_TEMP "mcp-bridge-node-probe.js"
           if (-not (Test-Path $exe)) { throw "Packaged executable not found: $exe" }
+          Set-Content -Path $probeScript -Value "require('fs').writeFileSync(process.argv[2], process.versions.node || '')" -NoNewline
           $env:ELECTRON_RUN_AS_NODE = "1"
-          & $exe -e "require('fs').writeFileSync(process.argv[1], process.versions.node || '')" $probe
+          $proc = Start-Process -FilePath $exe -ArgumentList @($probeScript, $probe) -Wait -PassThru -NoNewWindow
+          if ($proc.ExitCode -ne 0) { throw "Packaged Electron Node probe exited with code $($proc.ExitCode)." }
           if (-not (Test-Path $probe)) { throw "Packaged Electron did not run as Node." }
           $output = (Get-Content $probe -Raw).Trim()
           if ([string]::IsNullOrWhiteSpace($output)) { throw "Packaged Electron returned an empty Node version." }
