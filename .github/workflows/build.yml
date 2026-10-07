@@ -135,7 +135,23 @@ jobs:
             cat "$LOG"
             exit 1
           fi
-          echo "Linux Local MCP HTTP health check passed."
+
+          INIT_BODY='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1.0"}}}'
+          INIT_RESPONSE="$(curl -fsS -X POST "http://127.0.0.1:$PORT/mcp" \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            --data "$INIT_BODY")"
+          echo "$INIT_RESPONSE" | grep -q '"result"'
+
+          TOOLS_BODY='{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+          TOOLS_RESPONSE="$(curl -fsS -X POST "http://127.0.0.1:$PORT/mcp" \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            --data "$TOOLS_BODY")"
+          echo "$TOOLS_RESPONSE" | grep -q '"tools"'
+          echo "$TOOLS_RESPONSE" | grep -q '"list_roots"'
+
+          echo "Linux Local MCP HTTP initialize/tools-list smoke test passed."
 
       - name: Verify packaged Node runtime (Windows)
         if: matrix.target == 'win'
