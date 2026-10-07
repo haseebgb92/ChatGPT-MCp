@@ -63,6 +63,36 @@ const defaultSettings = {
 function configPath() { return path.join(app.getPath('userData'), 'settings.json'); }
 function keyPath() { return path.join(app.getPath('userData'), 'runtime-key.bin'); }
 function rootsPath() { return path.join(app.getPath('userData'), 'local-roots.json'); }
+function localPidPath() { return path.join(app.getPath('userData'), 'local-tunnel.pid'); }
+function localLogPath() { return path.join(app.getPath('userData'), 'local-tunnel.log'); }
+
+function readLocalPid() {
+  if (process.platform !== 'linux') return 0;
+  try {
+    const pid = Number(fs.readFileSync(localPidPath(), 'utf8').trim());
+    return Number.isInteger(pid) && pid > 1 ? pid : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function pidAlive(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isLocalRunning() {
+  if (process.platform !== 'linux') return isRunning(localProcess);
+  const pid = readLocalPid();
+  if (pidAlive(pid)) return true;
+  try { fs.unlinkSync(localPidPath()); } catch {}
+  return false;
+}
 
 async function loadSettings() {
   try {
@@ -109,7 +139,7 @@ async function getPublicState() {
   return {
     settings: { ...settings, apiKey: apiKey ? '********' : '' },
     hasApiKey: Boolean(apiKey),
-    localRunning: isRunning(localProcess),
+    localRunning: isLocalRunning(),
     browserRunning: isRunning(browserProcess),
     logs: logs.slice(-200),
     tunnelClientPath: resolveTunnelClient(false) || '',
@@ -412,7 +442,7 @@ async function startTunnel(kind) {
   if (settings.localTunnelId && settings.browserTunnelId && settings.localTunnelId === settings.browserTunnelId) {
     throw new Error('Local and Web must use different tunnel IDs if both servers will run simultaneously.');
   }
-  if (kind === 'local' && isRunning(localProcess)) return;
+  if (kind === 'local' && isLocalRunning()) return;
   if (kind === 'browser' && isRunning(browserProcess)) return;
 
   const tunnelClient = resolveTunnelClient();
@@ -434,16 +464,46 @@ async function startTunnel(kind) {
     CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS: settings.browserUsageStatistics ? '0' : '1'
   };
 
-  const child = spawn(
-    tunnelClient,
-    [
-      'run',
-      '--control-plane.tunnel-id', tunnelId,
-      '--mcp.command', mcpCommand,
-      '--health.listen-addr', '127.0.0.1:0'
-    ],
-    { env, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }
-  );
+  const args = [
+    'run',
+    '--control-plane.tunnel-id', tunnelId,
+    '--mcp.command', mcpCommand,
+    '--health.listen-addr', '127.0.0.1:0'
+  ];
+
+  if (kind === 'local' && process.platform === 'linux') {
+    await fsp.mkdir(app.getPath('userData'), { recursive: true });
+    const logFd = fs.openSync(localLogPath(), 'a', 0o600);
+    const child = spawn(tunnelClient, args, {
+      env,
+      detached: true,
+      windowsHide: true,
+      stdio: ['ignore', logFd, logFd]
+    });
+    fs.closeSync(logFd);
+    child.unref();
+    await fsp.writeFile(localPidPath(), String(child.pid), { mode: 0o600 });
+    localProcess = null;
+    addLog(kind, `Starting independent Linux tunnel ${tunnelId} (pid=${child.pid}).`);
+    addLog(kind, `Tunnel log: ${localLogPath()}`);
+    setTimeout(() => {
+      if (!pidAlive(child.pid)) {
+        try { fs.unlinkSync(localPidPath()); } catch {}
+        addLog(kind, 'Linux Local MCP tunnel exited during startup. Check the tunnel log.');
+      } else {
+        addLog(kind, 'Linux Local MCP tunnel is running independently.');
+      }
+      broadcastState();
+    }, 1500);
+    await broadcastState();
+    return;
+  }
+
+  const child = spawn(tunnelClient, args, {
+    env,
+    windowsHide: true,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
 
   if (kind === 'local') localProcess = child;
   else browserProcess = child;
@@ -463,6 +523,23 @@ async function startTunnel(kind) {
 }
 
 async function stopTunnel(kind) {
+  if (kind === 'local' && process.platform === 'linux') {
+    const pid = readLocalPid();
+    if (!pidAlive(pid)) {
+      try { await fsp.unlink(localPidPath()); } catch {}
+      return;
+    }
+    addLog(kind, `Stopping independent Linux tunnel (pid=${pid})...`);
+    try {
+      process.kill(-pid, 'SIGTERM');
+    } catch {
+      try { process.kill(pid, 'SIGTERM'); } catch {}
+    }
+    try { await fsp.unlink(localPidPath()); } catch {}
+    await broadcastState();
+    return;
+  }
+
   const child = kind === 'local' ? localProcess : browserProcess;
   if (!isRunning(child)) return;
   addLog(kind, 'Stopping...');
@@ -475,7 +552,7 @@ async function stopTunnel(kind) {
 
 async function restartAll() {
   const settings = await loadSettings();
-  const localWas = isRunning(localProcess);
+  const localWas = isLocalRunning();
   const browserWas = isRunning(browserProcess);
   await stopTunnel('local');
   await stopTunnel('browser');
@@ -486,7 +563,7 @@ async function restartAll() {
 
 function refreshTrayMenu() {
   if (!tray) return;
-  const localOn = isRunning(localProcess);
+  const localOn = isLocalRunning();
   const webOn = isRunning(browserProcess);
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Open MCP Bridge', click: showWindow },
@@ -654,6 +731,6 @@ app.on('before-quit', () => {
   quitting = true;
   if (updateInitialTimer) clearTimeout(updateInitialTimer);
   if (updateCheckTimer) clearInterval(updateCheckTimer);
-  stopTunnel('local');
+  if (process.platform !== 'linux') stopTunnel('local');
   stopTunnel('browser');
 });
