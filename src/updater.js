@@ -181,7 +181,9 @@ function installUpdate(platform, installerPath, options = {}) {
   }
 
   if (platform === 'linux') {
-    const relaunchPath = options.relaunchPath || '/opt/MCP Bridge/mcp-bridge';
+    // Always relaunch the canonical system-installed binary. Reusing process.execPath
+    // can reopen an older AppImage after the .deb was successfully upgraded.
+    const relaunchPath = '/opt/MCP Bridge/mcp-bridge';
     const script = [
       'pkexec /usr/bin/apt-get install -y "$1"',
       'rc=$?',
