@@ -582,7 +582,11 @@ function refreshTrayMenu() {
       }
     },
     { type: 'separator' },
-    { label: 'Quit', click: () => { quitting = true; app.quit(); } }
+    { label: 'Quit', click: async () => {
+      if (process.platform === 'linux') await stopTunnel('local');
+      quitting = true;
+      app.quit();
+    } }
   ]));
 }
 
