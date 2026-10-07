@@ -89,7 +89,7 @@ jobs:
         if: matrix.target == 'win'
         shell: pwsh
         run: |
-          $exe = "dist/win-unpacked/mcp-bridge.exe"
+          $exe = "dist/win-unpacked/MCP Bridge.exe"
           if (-not (Test-Path $exe)) { throw "Packaged executable not found: $exe" }
           $env:ELECTRON_RUN_AS_NODE = "1"
           $output = & $exe -e 'process.stdout.write(process.versions.node || "")'
