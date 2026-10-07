@@ -26,7 +26,8 @@ function getRoot(name) {
 function ok(data) { return { content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] }; }
 function fail(error) { return { isError: true, content: [{ type: 'text', text: error instanceof Error ? error.message : String(error) }] }; }
 
-const server = new McpServer({ name: 'local-folder-mcp', version: '0.3.0' });
+function createMcpServer() {
+const server = new McpServer({ name: 'local-folder-mcp', version: '0.3.1' });
 
 server.tool('list_roots', 'List allowed local folders and whether each is read-only or read-write.', {}, async () => {
   try { return ok(Object.entries(config.roots).map(([name, item]) => ({ name, mode: item.mode }))); } catch (e) { return fail(e); }
@@ -191,14 +192,25 @@ if (ENABLE_SHELL) {
     });
 }
 
+return server;
+}
+
+async function readJsonBody(req) {
+  const chunks = [];
+  let total = 0;
+  for await (const chunk of req) {
+    total += chunk.length;
+    if (total > 4 * 1024 * 1024) throw new Error('Request body too large.');
+    chunks.push(chunk);
+  }
+  if (!chunks.length) return undefined;
+  const raw = Buffer.concat(chunks).toString('utf8');
+  return raw ? JSON.parse(raw) : undefined;
+}
+
 const httpPort = Number(process.env.LOCAL_MCP_HTTP_PORT || 0);
 
 if (httpPort > 0) {
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined
-  });
-  await server.connect(transport);
-
   const httpServer = http.createServer(async (req, res) => {
     const pathname = new URL(req.url || '/', 'http://127.0.0.1').pathname;
     if (pathname === '/health') {
@@ -211,15 +223,32 @@ if (httpPort > 0) {
       res.end('Not found');
       return;
     }
+
+    let transport;
+    let requestServer;
     try {
-      await transport.handleRequest(req, res);
+      const parsedBody = req.method === 'POST' ? await readJsonBody(req) : undefined;
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined
+      });
+      requestServer = createMcpServer();
+      await requestServer.connect(transport);
+      await transport.handleRequest(req, res, parsedBody);
     } catch (error) {
+      process.stderr.write(`Local MCP HTTP request failed: ${error instanceof Error ? error.stack || error.message : String(error)}\n`);
       if (!res.headersSent) {
         res.writeHead(500, { 'content-type': 'application/json' });
       }
       if (!res.writableEnded) {
-        res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+        res.end(JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32603, message: error instanceof Error ? error.message : String(error) },
+          id: null
+        }));
       }
+    } finally {
+      try { await transport?.close(); } catch {}
+      try { await requestServer?.close(); } catch {}
     }
   });
 
@@ -227,6 +256,7 @@ if (httpPort > 0) {
     process.stderr.write(`Local MCP HTTP listening on http://127.0.0.1:${httpPort}/mcp\n`);
   });
 } else {
+  const server = createMcpServer();
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
