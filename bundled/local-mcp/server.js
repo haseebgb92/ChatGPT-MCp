@@ -1,8 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import http from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { loadConfig } from './config.js';
 import { resolveInside } from './security.js';
@@ -189,5 +191,42 @@ if (ENABLE_SHELL) {
     });
 }
 
-const transport = new StdioServerTransport();
-await server.connect(transport);
+const httpPort = Number(process.env.LOCAL_MCP_HTTP_PORT || 0);
+
+if (httpPort > 0) {
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined
+  });
+  await server.connect(transport);
+
+  const httpServer = http.createServer(async (req, res) => {
+    const pathname = new URL(req.url || '/', 'http://127.0.0.1').pathname;
+    if (pathname === '/health') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, name: 'local-folder-mcp' }));
+      return;
+    }
+    if (pathname !== '/mcp') {
+      res.writeHead(404, { 'content-type': 'text/plain' });
+      res.end('Not found');
+      return;
+    }
+    try {
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      if (!res.headersSent) {
+        res.writeHead(500, { 'content-type': 'application/json' });
+      }
+      if (!res.writableEnded) {
+        res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+      }
+    }
+  });
+
+  httpServer.listen(httpPort, '127.0.0.1', () => {
+    process.stderr.write(`Local MCP HTTP listening on http://127.0.0.1:${httpPort}/mcp\n`);
+  });
+} else {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
