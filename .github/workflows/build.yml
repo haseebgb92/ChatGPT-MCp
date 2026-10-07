@@ -103,6 +103,40 @@ jobs:
           test -n "$OUTPUT"
           echo "Bundled Node runtime OK: Node $OUTPUT"
 
+      - name: Verify Linux Local MCP HTTP server
+        if: matrix.target == 'linux'
+        shell: bash
+        run: |
+          CONFIG="$RUNNER_TEMP/local-roots.json"
+          LOG="$RUNNER_TEMP/local-mcp-http.log"
+          PORT=38475
+          printf '%s\n' '{"roots":{"tmp":{"path":"/tmp","mode":"read-write"}}}' > "$CONFIG"
+          LOCAL_FOLDER_MCP_CONFIG="$CONFIG" \
+          LOCAL_MCP_HTTP_PORT="$PORT" \
+          ENABLE_WRITE=true \
+          dist/linux-unpacked/resources/node-runtime/node \
+            dist/linux-unpacked/resources/app/bundled/local-mcp/server.js \
+            >"$LOG" 2>&1 &
+          PID=$!
+          trap 'kill "$PID" 2>/dev/null || true' EXIT
+          OK=0
+          for i in $(seq 1 40); do
+            if curl -fsS "http://127.0.0.1:$PORT/health" | grep -q '"ok":true'; then
+              OK=1
+              break
+            fi
+            if ! kill -0 "$PID" 2>/dev/null; then
+              cat "$LOG"
+              exit 1
+            fi
+            sleep 0.25
+          done
+          if [ "$OK" -ne 1 ]; then
+            cat "$LOG"
+            exit 1
+          fi
+          echo "Linux Local MCP HTTP health check passed."
+
       - name: Verify packaged Node runtime (Windows)
         if: matrix.target == 'win'
         shell: pwsh
