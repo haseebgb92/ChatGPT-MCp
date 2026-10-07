@@ -3,6 +3,7 @@ const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
+const net = require('node:net');
 const { checkForUpdate, downloadAndVerify, installUpdate } = require('./updater');
 
 const stableUserData = path.join(app.getPath('appData'), 'chatgpt-mcp-bridge');
@@ -64,17 +65,22 @@ function configPath() { return path.join(app.getPath('userData'), 'settings.json
 function keyPath() { return path.join(app.getPath('userData'), 'runtime-key.bin'); }
 function rootsPath() { return path.join(app.getPath('userData'), 'local-roots.json'); }
 function localPidPath() { return path.join(app.getPath('userData'), 'local-tunnel.pid'); }
+function localServerPidPath() { return path.join(app.getPath('userData'), 'local-mcp-http.pid'); }
 function localLogPath() { return path.join(app.getPath('userData'), 'local-tunnel.log'); }
+function localServerLogPath() { return path.join(app.getPath('userData'), 'local-mcp-http.log'); }
 
-function readLocalPid() {
+function readPidFile(filePath) {
   if (process.platform !== 'linux') return 0;
   try {
-    const pid = Number(fs.readFileSync(localPidPath(), 'utf8').trim());
+    const pid = Number(fs.readFileSync(filePath, 'utf8').trim());
     return Number.isInteger(pid) && pid > 1 ? pid : 0;
   } catch {
     return 0;
   }
 }
+
+function readLocalPid() { return readPidFile(localPidPath()); }
+function readLocalServerPid() { return readPidFile(localServerPidPath()); }
 
 function pidAlive(pid) {
   if (!pid) return false;
@@ -88,10 +94,59 @@ function pidAlive(pid) {
 
 function isLocalRunning() {
   if (process.platform !== 'linux') return isRunning(localProcess);
-  const pid = readLocalPid();
-  if (pidAlive(pid)) return true;
-  try { fs.unlinkSync(localPidPath()); } catch {}
-  return false;
+  const tunnelPid = readLocalPid();
+  const serverPid = readLocalServerPid();
+  const tunnelAlive = pidAlive(tunnelPid);
+  const serverAlive = pidAlive(serverPid);
+  if (!tunnelAlive) {
+    try { fs.unlinkSync(localPidPath()); } catch {}
+  }
+  if (!serverAlive) {
+    try { fs.unlinkSync(localServerPidPath()); } catch {}
+  }
+  return tunnelAlive && serverAlive;
+}
+
+function getFreeLocalPort() {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.unref();
+    probe.on('error', reject);
+    probe.listen(0, '127.0.0.1', () => {
+      const address = probe.address();
+      const port = typeof address === 'object' && address ? address.port : 0;
+      probe.close(err => err ? reject(err) : resolve(port));
+    });
+  });
+}
+
+function waitForLocalPort(port, timeoutMs = 5000) {
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    const tryConnect = () => {
+      const socket = net.createConnection({ host: '127.0.0.1', port });
+      let settled = false;
+      const retry = () => {
+        if (settled) return;
+        settled = true;
+        socket.destroy();
+        if (Date.now() - started >= timeoutMs) {
+          reject(new Error(`Local MCP HTTP server did not open port ${port}.`));
+        } else {
+          setTimeout(tryConnect, 120);
+        }
+      };
+      socket.once('connect', () => {
+        if (settled) return;
+        settled = true;
+        socket.destroy();
+        resolve();
+      });
+      socket.once('error', retry);
+      socket.setTimeout(500, retry);
+    };
+    tryConnect();
+  });
 }
 
 async function loadSettings() {
@@ -448,15 +503,19 @@ async function startTunnel(kind) {
   const tunnelClient = resolveTunnelClient();
   if (!tunnelClient) throw new Error('tunnel-client executable not found.');
 
-  const mcpCommand = kind === 'local'
-    ? await buildLocalCommand(settings)
-    : buildBrowserCommand(settings);
+  let mcpCommand = '';
+  if (kind === 'local') {
+    if (process.platform === 'linux') await writeRootsConfig(settings);
+    else mcpCommand = await buildLocalCommand(settings);
+  } else {
+    mcpCommand = buildBrowserCommand(settings);
+  }
 
   const env = {
     ...process.env,
     CONTROL_PLANE_API_KEY: apiKey,
     CONTROL_PLANE_TUNNEL_ID: tunnelId,
-    MCP_COMMAND: mcpCommand,
+    ...(mcpCommand ? { MCP_COMMAND: mcpCommand } : {}),
     LOCAL_FOLDER_MCP_CONFIG: rootsPath(),
     ENABLE_WRITE: settings.enableWrite ? 'true' : 'false',
     ENABLE_SHELL: settings.enableShell ? 'true' : 'false',
@@ -464,40 +523,94 @@ async function startTunnel(kind) {
     CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS: settings.browserUsageStatistics ? '0' : '1'
   };
 
+  if (kind === 'local' && process.platform === 'linux') {
+    await fsp.mkdir(app.getPath('userData'), { recursive: true });
+
+    const nodeRuntime = resolveNodeRuntime();
+    const serverPath = path.join(app.getAppPath(), 'bundled', 'local-mcp', 'server.js');
+    const port = await getFreeLocalPort();
+    const serverEnv = {
+      ...env,
+      LOCAL_MCP_HTTP_PORT: String(port)
+    };
+    delete serverEnv.MCP_COMMAND;
+    delete serverEnv.MCP_SERVER_URL;
+
+    const serverLogFd = fs.openSync(localServerLogPath(), 'a', 0o600);
+    const serverChild = spawn(nodeRuntime, [serverPath], {
+      env: serverEnv,
+      detached: true,
+      windowsHide: true,
+      stdio: ['ignore', serverLogFd, serverLogFd]
+    });
+    fs.closeSync(serverLogFd);
+    serverChild.unref();
+    await fsp.writeFile(localServerPidPath(), String(serverChild.pid), { mode: 0o600 });
+    addLog(kind, `Starting Linux Local MCP HTTP server on 127.0.0.1:${port} (pid=${serverChild.pid}).`);
+    addLog(kind, `Local MCP server log: ${localServerLogPath()}`);
+
+    try {
+      await waitForLocalPort(port, 5000);
+    } catch (error) {
+      try { process.kill(-serverChild.pid, 'SIGTERM'); } catch {}
+      try { await fsp.unlink(localServerPidPath()); } catch {}
+      throw error;
+    }
+
+    const serverUrl = `http://127.0.0.1:${port}/mcp`;
+    const tunnelEnv = { ...env, MCP_SERVER_URL: serverUrl };
+    delete tunnelEnv.MCP_COMMAND;
+
+    const args = [
+      'run',
+      '--control-plane.tunnel-id', tunnelId,
+      '--mcp.server-url', serverUrl,
+      '--health.listen-addr', '127.0.0.1:0'
+    ];
+
+    const tunnelLogFd = fs.openSync(localLogPath(), 'a', 0o600);
+    const tunnelChild = spawn(tunnelClient, args, {
+      env: tunnelEnv,
+      detached: true,
+      windowsHide: true,
+      stdio: ['ignore', tunnelLogFd, tunnelLogFd]
+    });
+    fs.closeSync(tunnelLogFd);
+    tunnelChild.unref();
+    await fsp.writeFile(localPidPath(), String(tunnelChild.pid), { mode: 0o600 });
+    localProcess = null;
+
+    addLog(kind, `Starting Linux HTTP tunnel ${tunnelId} (pid=${tunnelChild.pid}).`);
+    addLog(kind, `Tunnel target: ${serverUrl}`);
+    addLog(kind, `Tunnel log: ${localLogPath()}`);
+
+    setTimeout(() => {
+      const tunnelAlive = pidAlive(tunnelChild.pid);
+      const serverAlive = pidAlive(serverChild.pid);
+      if (!tunnelAlive || !serverAlive) {
+        if (!tunnelAlive) {
+          try { fs.unlinkSync(localPidPath()); } catch {}
+        }
+        if (!serverAlive) {
+          try { fs.unlinkSync(localServerPidPath()); } catch {}
+        }
+        addLog(kind, `Linux Local MCP startup failed (tunnel=${tunnelAlive ? 'up' : 'down'}, server=${serverAlive ? 'up' : 'down'}).`);
+      } else {
+        addLog(kind, 'Linux Local MCP is running over localhost HTTP.');
+      }
+      broadcastState();
+    }, 1800);
+
+    await broadcastState();
+    return;
+  }
+
   const args = [
     'run',
     '--control-plane.tunnel-id', tunnelId,
     '--mcp.command', mcpCommand,
     '--health.listen-addr', '127.0.0.1:0'
   ];
-
-  if (kind === 'local' && process.platform === 'linux') {
-    await fsp.mkdir(app.getPath('userData'), { recursive: true });
-    const logFd = fs.openSync(localLogPath(), 'a', 0o600);
-    const child = spawn(tunnelClient, args, {
-      env,
-      detached: true,
-      windowsHide: true,
-      stdio: ['ignore', logFd, logFd]
-    });
-    fs.closeSync(logFd);
-    child.unref();
-    await fsp.writeFile(localPidPath(), String(child.pid), { mode: 0o600 });
-    localProcess = null;
-    addLog(kind, `Starting independent Linux tunnel ${tunnelId} (pid=${child.pid}).`);
-    addLog(kind, `Tunnel log: ${localLogPath()}`);
-    setTimeout(() => {
-      if (!pidAlive(child.pid)) {
-        try { fs.unlinkSync(localPidPath()); } catch {}
-        addLog(kind, 'Linux Local MCP tunnel exited during startup. Check the tunnel log.');
-      } else {
-        addLog(kind, 'Linux Local MCP tunnel is running independently.');
-      }
-      broadcastState();
-    }, 1500);
-    await broadcastState();
-    return;
-  }
 
   const child = spawn(tunnelClient, args, {
     env,
@@ -524,18 +637,21 @@ async function startTunnel(kind) {
 
 async function stopTunnel(kind) {
   if (kind === 'local' && process.platform === 'linux') {
-    const pid = readLocalPid();
-    if (!pidAlive(pid)) {
-      try { await fsp.unlink(localPidPath()); } catch {}
-      return;
+    const tunnelPid = readLocalPid();
+    const serverPid = readLocalServerPid();
+    addLog(kind, `Stopping Linux Local MCP (tunnel pid=${tunnelPid || 'none'}, server pid=${serverPid || 'none'})...`);
+
+    for (const pid of [tunnelPid, serverPid]) {
+      if (!pidAlive(pid)) continue;
+      try {
+        process.kill(-pid, 'SIGTERM');
+      } catch {
+        try { process.kill(pid, 'SIGTERM'); } catch {}
+      }
     }
-    addLog(kind, `Stopping independent Linux tunnel (pid=${pid})...`);
-    try {
-      process.kill(-pid, 'SIGTERM');
-    } catch {
-      try { process.kill(pid, 'SIGTERM'); } catch {}
-    }
+
     try { await fsp.unlink(localPidPath()); } catch {}
+    try { await fsp.unlink(localServerPidPath()); } catch {}
     await broadcastState();
     return;
   }
