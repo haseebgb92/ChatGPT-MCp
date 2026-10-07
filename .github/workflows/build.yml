@@ -3,6 +3,8 @@ name: Build installers
 on:
   workflow_dispatch:
   push:
+    branches:
+      - "main"
     tags:
       - "v*"
 
@@ -125,7 +127,7 @@ jobs:
 
   release:
     name: Publish GitHub release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
 
@@ -139,6 +141,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v0.2.2' }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
             release-assets/*.deb
