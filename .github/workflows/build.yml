@@ -90,10 +90,14 @@ jobs:
         shell: pwsh
         run: |
           $exe = "dist/win-unpacked/MCP Bridge.exe"
+          $probe = Join-Path $env:RUNNER_TEMP "mcp-bridge-node-version.txt"
           if (-not (Test-Path $exe)) { throw "Packaged executable not found: $exe" }
           $env:ELECTRON_RUN_AS_NODE = "1"
-          $output = & $exe -e 'process.stdout.write(process.versions.node || "")'
-          if ([string]::IsNullOrWhiteSpace($output)) { throw "Packaged Electron did not run as Node." }
+          & $exe -e "require('fs').writeFileSync(process.argv[1], process.versions.node || '')" $probe
+          if ($LASTEXITCODE -ne 0) { throw "Packaged Electron Node probe exited with code $LASTEXITCODE." }
+          if (-not (Test-Path $probe)) { throw "Packaged Electron did not run as Node." }
+          $output = (Get-Content $probe -Raw).Trim()
+          if ([string]::IsNullOrWhiteSpace($output)) { throw "Packaged Electron returned an empty Node version." }
           Write-Host "Packaged Electron RunAsNode OK: Node $output"
 
       - name: Create SHA-256 checksums (Linux)
