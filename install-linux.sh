@@ -139,7 +139,14 @@ say "Installing ChatGPT MCP Bridge and package dependencies"
 sudo apt-get install -y "$TMP/chatgpt-mcp-bridge.deb"
 
 say "Installation complete"
+INSTALLED_VERSION="$(dpkg-query -W -f='${Version}' chatgpt-mcp-bridge 2>/dev/null || true)"
+if [[ -n "$INSTALLED_VERSION" ]]; then
+  printf '%s\n' "Installed Debian package version: $INSTALLED_VERSION"
+fi
 printf '%s\n' \
+  "Canonical installed executable: /opt/MCP Bridge/mcp-bridge" \
+  "If an older AppImage is still open, quit it and launch the canonical executable once." \
+  "" \
   "Open 'ChatGPT MCP Bridge' from your applications menu." \
   "" \
   "The installed app contains:" \
