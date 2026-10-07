@@ -110,6 +110,10 @@ else
   say "Installing application dependencies"
   npm install
 
+  mkdir -p vendor/node-runtime
+  cp "$(command -v node)" vendor/node-runtime/node
+  chmod +x vendor/node-runtime/node
+
   mkdir -p vendor/tunnel-client
   if command -v tunnel-client >/dev/null 2>&1 && tunnel-client help >/dev/null 2>&1; then
     say "Using existing full tunnel-client from $(command -v tunnel-client)"
@@ -152,7 +156,7 @@ printf '%s\n' \
   "The installed app contains:" \
   "  - Local MCP server" \
   "  - Chrome DevTools MCP" \
-  "  - Electron/Node runtime" \
+  "  - Dedicated Node runtime for MCP servers" \
   "  - OpenAI tunnel-client" \
   "" \
   "You only need to enter your own Runtime API key and two tunnel IDs." \
