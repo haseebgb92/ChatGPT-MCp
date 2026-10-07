@@ -368,20 +368,38 @@ async function inspectFolder(folderPath) {
   return { path: realPath, readable: true, writable };
 }
 
+function resolveNodeRuntime() {
+  const exe = process.platform === 'win32' ? 'node.exe' : 'node';
+  const candidates = [];
+  if (app.isPackaged) candidates.push(path.join(process.resourcesPath, 'node-runtime', exe));
+  candidates.push(path.join(app.getAppPath(), 'vendor', 'node-runtime', exe));
+
+  for (const p of candidates) {
+    if (p && fs.existsSync(p)) return p;
+  }
+
+  const which = process.platform === 'win32'
+    ? spawnSync('where', ['node'], { encoding: 'utf8' })
+    : spawnSync('which', ['node'], { encoding: 'utf8' });
+  if (which.status === 0) return which.stdout.trim().split(/\r?\n/)[0];
+
+  throw new Error('Bundled Node runtime is missing.');
+}
+
 async function buildLocalCommand(settings) {
   await writeRootsConfig(settings);
-  const electronNode = process.execPath;
+  const nodeRuntime = resolveNodeRuntime();
   const serverPath = path.join(app.getAppPath(), 'bundled', 'local-mcp', 'server.js');
-  return `${quoteCommandArg(electronNode)} ${quoteCommandArg(serverPath)}`;
+  return `${quoteCommandArg(nodeRuntime)} ${quoteCommandArg(serverPath)}`;
 }
 
 function buildBrowserCommand(settings) {
-  const electronNode = process.execPath;
+  const nodeRuntime = resolveNodeRuntime();
   const chromeScript = path.join(app.getAppPath(), 'node_modules', 'chrome-devtools-mcp', 'build', 'src', 'bin', 'chrome-devtools-mcp.js');
   const flags = ['--autoConnect'];
   if (settings.browserVision) flags.push('--experimentalVision');
   if (!settings.browserUsageStatistics) flags.push('--no-usage-statistics');
-  return `${quoteCommandArg(electronNode)} ${quoteCommandArg(chromeScript)} ${flags.join(' ')}`;
+  return `${quoteCommandArg(nodeRuntime)} ${quoteCommandArg(chromeScript)} ${flags.join(' ')}`;
 }
 
 async function startTunnel(kind) {
@@ -409,7 +427,6 @@ async function startTunnel(kind) {
     CONTROL_PLANE_API_KEY: apiKey,
     CONTROL_PLANE_TUNNEL_ID: tunnelId,
     MCP_COMMAND: mcpCommand,
-    ELECTRON_RUN_AS_NODE: '1',
     LOCAL_FOLDER_MCP_CONFIG: rootsPath(),
     ENABLE_WRITE: settings.enableWrite ? 'true' : 'false',
     ENABLE_SHELL: settings.enableShell ? 'true' : 'false',
