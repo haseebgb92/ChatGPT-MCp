@@ -215,7 +215,7 @@ async function performUpdateInstall() {
   if (!updateState.downloadedInstaller) throw new Error('Download the update first.');
   setUpdateState({ status: 'installing', message: 'Launching the verified installer…' });
   try {
-    installUpdate(process.platform, updateState.downloadedInstaller, { relaunchPath: process.execPath });
+    installUpdate(process.platform, updateState.downloadedInstaller);
     addLog('updater', `Launching update installer for ${updateState.latestVersion || 'new version'}.`);
     setTimeout(() => {
       quitting = true;
