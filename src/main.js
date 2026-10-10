@@ -29,6 +29,9 @@ let tray = null;
 let quitting = false;
 let localProcess = null;
 let browserProcess = null;
+let webStarting = null;
+let webStopping = null;
+let quitCleanupStarted = false;
 let sessionApiKey = '';
 let logs = [];
 let updateCheckTimer = null;
@@ -488,6 +491,18 @@ function buildBrowserCommand(settings) {
 }
 
 async function startTunnel(kind) {
+  if (kind !== 'browser') return startTunnelImpl(kind);
+  if (quitting) return;
+  if (webStarting) return webStarting;
+  const task = (async () => {
+    if (webStopping) await webStopping;
+    if (!quitting && !isRunning(browserProcess)) await startTunnelImpl(kind);
+  })();
+  webStarting = task;
+  try { await task; } finally { if (webStarting === task) webStarting = null; }
+}
+
+async function startTunnelImpl(kind) {
   const settings = await loadSettings();
   const apiKey = await loadSavedApiKey();
   if (!apiKey) throw new Error('Runtime API key is missing. Add it in Settings.');
@@ -614,6 +629,7 @@ async function startTunnel(kind) {
 
   const child = spawn(tunnelClient, args, {
     env,
+    detached: process.platform !== 'win32',
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -627,8 +643,8 @@ async function startTunnel(kind) {
   child.on('error', e => addLog(kind, `ERROR: ${e.message}`));
   child.on('close', (code, signal) => {
     addLog(kind, `Stopped (code=${code}, signal=${signal || 'none'}).`);
-    if (kind === 'local') localProcess = null;
-    else browserProcess = null;
+    if (kind === 'local' && localProcess === child) localProcess = null;
+    else if (kind === 'browser' && browserProcess === child) browserProcess = null;
     broadcastState();
   });
 
@@ -636,6 +652,41 @@ async function startTunnel(kind) {
 }
 
 async function stopTunnel(kind) {
+  if (kind === 'browser') {
+    if (webStopping) return webStopping;
+    const task = (async () => {
+      if (webStarting) await webStarting.catch(() => {});
+      const child = browserProcess;
+      if (!child || child.exitCode !== null) return;
+      addLog('browser', 'Stopping Web MCP process group...');
+      const exit = new Promise(resolve => {
+        if (child.exitCode !== null) return resolve();
+        child.once('close', resolve);
+      });
+      if (process.platform === 'win32') {
+        await new Promise(resolve => {
+          const killer = spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true });
+          killer.once('close', resolve);
+          killer.once('error', resolve);
+        });
+      } else {
+        try { process.kill(-child.pid, 'SIGTERM'); }
+        catch { try { child.kill('SIGTERM'); } catch {} }
+      }
+      await Promise.race([exit, new Promise(resolve => setTimeout(resolve, 3000))]);
+      if (child.exitCode === null) {
+        if (process.platform !== 'win32') {
+          try { process.kill(-child.pid, 'SIGKILL'); } catch {}
+        }
+        await Promise.race([exit, new Promise(resolve => setTimeout(resolve, 1000))]);
+      }
+      if (browserProcess === child) browserProcess = null;
+      await broadcastState();
+    })();
+    webStopping = task;
+    try { await task; } finally { if (webStopping === task) webStopping = null; }
+    return;
+  }
   if (kind === 'local' && process.platform === 'linux') {
     const tunnelPid = readLocalPid();
     const serverPid = readLocalServerPid();
@@ -847,10 +898,21 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {});
-app.on('before-quit', () => {
+app.on('before-quit', event => {
+  if (quitCleanupStarted) return;
+  event.preventDefault();
+  quitCleanupStarted = true;
   quitting = true;
   if (updateInitialTimer) clearTimeout(updateInitialTimer);
   if (updateCheckTimer) clearInterval(updateCheckTimer);
-  if (process.platform !== 'linux') stopTunnel('local');
-  stopTunnel('browser');
+  (async () => {
+    try {
+      if (process.platform !== 'linux') await stopTunnel('local');
+      await stopTunnel('browser');
+    } catch (error) {
+      addLog('app', `Shutdown cleanup error: ${error.message}`);
+    } finally {
+      app.quit();
+    }
+  })();
 });
