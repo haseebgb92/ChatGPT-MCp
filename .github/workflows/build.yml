@@ -3,6 +3,8 @@ name: Build installers
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
@@ -194,7 +196,7 @@ jobs:
 
   release:
     name: Publish GitHub release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.ref == 'refs/heads/main' && github.event.head_commit.message == 'Release v0.2.8 Web MCP lifecycle fix')
     needs: build
     runs-on: ubuntu-latest
 
@@ -209,6 +211,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v0.2.8' }}
+          target_commitish: ${{ github.sha }}
           files: |
             release-assets/*.deb
             release-assets/*.AppImage
