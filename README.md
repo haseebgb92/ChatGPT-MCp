@@ -12,7 +12,7 @@
 
 MCP Bridge is a desktop app for **Linux and Windows** that keeps powerful local tools on your own computer while making them available to ChatGPT through **OpenAI Secure MCP Tunnel**.
 
-It exposes two independent connections:
+It exposes three independent connections:
 
 | Connection | What it does |
 |---|---|
@@ -434,3 +434,13 @@ MIT License.
 - Electron
 
 Built by **Advertpreneur**.
+
+## Meta Manager MCP (v0.2.9)
+
+1. Install and open **Meta Manager v0.1.21 or later** on the same Windows or Linux computer. In Meta Manager → Settings verify that Local MCP is online.
+2. Create a **separate** tunnel ID using [OpenAI Tunnels](https://platform.openai.com/settings/organization/tunnels). Never reuse your Local or Web tunnel IDs.
+3. In **MCP Bridge → Connection settings**, enter the Meta Manager tunnel ID and your Runtime API key, then select **Save settings**.
+4. Choose **Start Meta** in Connections. The bundled proxy reads the MCP tools from `http://127.0.0.1:38939/mcp` and connects them through the secure OpenAI tunnel.
+5. Connect the corresponding tunnel in ChatGPT. Both applications must be running to use local MCP tools; posts already scheduled through Meta Manager Cloud do not require either PC to remain on.
+
+The Runtime API key is kept in secure local storage and is never included in installer files or public links. The Meta Manager local MCP service stays bound to 127.0.0.1 rather than a public HTTP listener. The tunnel ID alone is not a credential and cannot establish the connection without a Runtime API key and a running tunnel client.

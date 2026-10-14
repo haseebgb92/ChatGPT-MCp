@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('bridge', {
   stopLocal: () => ipcRenderer.invoke('local:stop'),
   startBrowser: () => ipcRenderer.invoke('browser:start'),
   stopBrowser: () => ipcRenderer.invoke('browser:stop'),
+  startMeta: () => ipcRenderer.invoke('meta:start'),
+  stopMeta: () => ipcRenderer.invoke('meta:stop'),
   restartAll: () => ipcRenderer.invoke('servers:restart-all'),
   checkForUpdates: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),

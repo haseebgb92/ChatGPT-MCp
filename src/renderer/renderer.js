@@ -83,20 +83,23 @@ function setStatus(s) {
 
   $('localToggle').textContent = s.localRunning ? 'Stop Local' : 'Start Local';
   $('browserToggle').textContent = s.browserRunning ? 'Stop Web' : 'Start Web';
+  $('metaToggle').textContent = s.metaRunning ? 'Stop Meta' : 'Start Meta';
   $('localToggle').classList.toggle('stop', s.localRunning);
   $('browserToggle').classList.toggle('stop', s.browserRunning);
+  $('metaToggle').classList.toggle('stop', Boolean(s.metaRunning));
 
   $('keyState').textContent = s.hasApiKey ? 'Valid' : 'Not configured';
   $('keyPill').textContent = s.hasApiKey ? 'Stored' : 'Missing';
   $('keyPill').classList.toggle('good', s.hasApiKey);
 
-  const anyRunning = s.localRunning || s.browserRunning;
+  const anyRunning = s.localRunning || s.browserRunning || s.metaRunning;
   $('sidebarDot').classList.toggle('on', anyRunning);
   $('sidebarStatus').textContent = anyRunning ? 'Services running' : 'Services stopped';
-  $('sidebarSub').textContent = s.localRunning && s.browserRunning ? 'Local + Web MCP' : s.localRunning ? 'Local MCP' : s.browserRunning ? 'Web MCP' : 'Local + Web MCP';
+  $('sidebarSub').textContent = [s.localRunning ? 'Local' : '', s.browserRunning ? 'Web' : '', s.metaRunning ? 'Meta' : ''].filter(Boolean).join(' + ') || 'Local + Web + Meta MCP';
 
   $('localTunnelLabel').textContent = cleanTunnel(cfg.localTunnelId);
   $('browserTunnelLabel').textContent = cleanTunnel(cfg.browserTunnelId);
+  $('metaTunnelLabel').textContent = cleanTunnel(cfg.metaTunnelId);
   $('detectedTunnelClient').textContent = s.tunnelClientPath || 'Not found';
   $('clientStatus').textContent = s.tunnelClientPath ? 'Detected' : 'Not found';
   $('visionStatus').textContent = cfg.browserVision ? 'Enabled' : 'Disabled';
@@ -105,6 +108,7 @@ function setStatus(s) {
 
   if (!$('localTunnelId').dataset.dirty) $('localTunnelId').value = cfg.localTunnelId || '';
   if (!$('browserTunnelId').dataset.dirty) $('browserTunnelId').value = cfg.browserTunnelId || '';
+  if (!$('metaTunnelId').dataset.dirty) $('metaTunnelId').value = cfg.metaTunnelId || '';
   if (!$('apiKey').dataset.dirty) $('apiKey').value = s.hasApiKey ? '********' : '';
 }
 
@@ -226,7 +230,7 @@ async function load() {
   const cfg = state.settings || {};
   roots = Array.isArray(cfg.roots) ? JSON.parse(JSON.stringify(cfg.roots)) : [];
 
-  ['rememberApiKey','enableWrite','enableShell','fullShell','browserVision','browserUsageStatistics','startAtLogin','startLocalOnLaunch','startBrowserOnLaunch','automaticUpdateChecks']
+  ['rememberApiKey','enableWrite','enableShell','fullShell','browserVision','browserUsageStatistics','startAtLogin','startLocalOnLaunch','startBrowserOnLaunch','startMetaOnLaunch','automaticUpdateChecks']
     .forEach(id => $(id).checked = Boolean(cfg[id]));
 
   $('customTunnelClient').value = cfg.customTunnelClient || '';
@@ -279,6 +283,7 @@ $('save').onclick = async () => {
       apiKey: $('apiKey').value,
       localTunnelId: $('localTunnelId').value.trim(),
       browserTunnelId: $('browserTunnelId').value.trim(),
+      metaTunnelId: $('metaTunnelId').value.trim(),
       rememberApiKey: $('rememberApiKey').checked,
       roots,
       enableWrite: $('enableWrite').checked,
@@ -289,6 +294,7 @@ $('save').onclick = async () => {
       startAtLogin: $('startAtLogin').checked,
       startLocalOnLaunch: $('startLocalOnLaunch').checked,
       startBrowserOnLaunch: $('startBrowserOnLaunch').checked,
+      startMetaOnLaunch: $('startMetaOnLaunch').checked,
       automaticUpdateChecks: $('automaticUpdateChecks').checked,
       customTunnelClient: $('customTunnelClient').value.trim()
     };
@@ -296,6 +302,7 @@ $('save').onclick = async () => {
     $('apiKey').dataset.dirty = '';
     $('localTunnelId').dataset.dirty = '';
     $('browserTunnelId').dataset.dirty = '';
+    $('metaTunnelId').dataset.dirty = '';
     $('message').textContent = 'Saved.';
   } catch (e) {
     $('message').textContent = e.message || String(e);
@@ -311,6 +318,10 @@ $('browserToggle').onclick = async () => {
   try { state.browserRunning ? await window.bridge.stopBrowser() : await window.bridge.startBrowser(); }
   catch (e) { $('message').textContent = e.message || String(e); }
 };
+$('metaToggle').onclick = async () => {
+  try { state.metaRunning ? await window.bridge.stopMeta() : await window.bridge.startMeta(); }
+  catch (e) { $('message').textContent = e.message || String(e); }
+};
 
 $('restartAll').onclick = async () => {
   try { await window.bridge.restartAll(); }
@@ -319,7 +330,7 @@ $('restartAll').onclick = async () => {
 
 $('clearLogs').onclick = () => $('logs').textContent = '';
 
-['apiKey','localTunnelId','browserTunnelId'].forEach(id => {
+['apiKey','localTunnelId','browserTunnelId','metaTunnelId'].forEach(id => {
   $(id).oninput = () => $(id).dataset.dirty = '1';
 });
 

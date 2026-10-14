@@ -29,6 +29,7 @@ let tray = null;
 let quitting = false;
 let localProcess = null;
 let browserProcess = null;
+let metaProcess = null;
 let webStarting = null;
 let webStopping = null;
 let quitCleanupStarted = false;
@@ -50,6 +51,7 @@ let updateState = {
 const defaultSettings = {
   localTunnelId: '',
   browserTunnelId: '',
+  metaTunnelId: '',
   rememberApiKey: true,
   roots: [],
   enableWrite: true,
@@ -59,6 +61,7 @@ const defaultSettings = {
   browserUsageStatistics: false,
   startLocalOnLaunch: false,
   startBrowserOnLaunch: false,
+  startMetaOnLaunch: false,
   startAtLogin: false,
   customTunnelClient: '',
   automaticUpdateChecks: true
@@ -199,6 +202,7 @@ async function getPublicState() {
     hasApiKey: Boolean(apiKey),
     localRunning: isLocalRunning(),
     browserRunning: isRunning(browserProcess),
+    metaRunning: isRunning(metaProcess),
     logs: logs.slice(-200),
     tunnelClientPath: resolveTunnelClient(false) || '',
     platform: process.platform,
@@ -490,6 +494,21 @@ function buildBrowserCommand(settings) {
   return `${quoteCommandArg(nodeRuntime)} ${quoteCommandArg(chromeScript)} ${flags.join(' ')}`;
 }
 
+function buildMetaCommand() {
+  const nodeRuntime = resolveNodeRuntime();
+  const script = path.join(app.getAppPath(), 'bundled', 'meta-manager-proxy', 'server.js');
+  if (!fs.existsSync(script)) throw new Error('Meta Manager MCP proxy is missing from the installer.');
+  return `${quoteCommandArg(nodeRuntime)} ${quoteCommandArg(script)}`;
+}
+
+async function ensureMetaManagerOnline() {
+  try {
+    const res = await fetch('http://127.0.0.1:38939/health', { signal: AbortSignal.timeout(3500) });
+    if (res.ok) return;
+  } catch {}
+  throw new Error('Start Meta Manager on this computer first. Its local MCP service must be online.');
+}
+
 async function startTunnel(kind) {
   if (kind !== 'browser') return startTunnelImpl(kind);
   if (quitting) return;
@@ -507,13 +526,17 @@ async function startTunnelImpl(kind) {
   const apiKey = await loadSavedApiKey();
   if (!apiKey) throw new Error('Runtime API key is missing. Add it in Settings.');
 
-  const tunnelId = kind === 'local' ? settings.localTunnelId : settings.browserTunnelId;
-  if (!/^tunnel_[0-9a-f]{32}$/.test(tunnelId || '')) throw new Error(`${kind === 'local' ? 'Local' : 'Web'} tunnel ID is missing or invalid.`);
-  if (settings.localTunnelId && settings.browserTunnelId && settings.localTunnelId === settings.browserTunnelId) {
-    throw new Error('Local and Web must use different tunnel IDs if both servers will run simultaneously.');
+  if (!['local', 'browser', 'meta'].includes(kind)) throw new Error('Unknown tunnel service.');
+  const tunnelId = kind === 'local' ? settings.localTunnelId : kind === 'browser' ? settings.browserTunnelId : settings.metaTunnelId;
+  if (!/^tunnel_[0-9a-f]{32}$/.test(tunnelId || '')) {
+    throw new Error(`${kind === 'meta' ? 'Meta Manager' : kind === 'local' ? 'Local' : 'Web'} tunnel ID is missing or invalid.`);
   }
+  const allIds = [settings.localTunnelId, settings.browserTunnelId, settings.metaTunnelId].filter(Boolean);
+  if (new Set(allIds).size !== allIds.length) throw new Error('Every MCP service must use a different tunnel ID.');
   if (kind === 'local' && isLocalRunning()) return;
   if (kind === 'browser' && isRunning(browserProcess)) return;
+  if (kind === 'meta' && isRunning(metaProcess)) return;
+  if (kind === 'meta') await ensureMetaManagerOnline();
 
   const tunnelClient = resolveTunnelClient();
   if (!tunnelClient) throw new Error('tunnel-client executable not found.');
@@ -522,8 +545,10 @@ async function startTunnelImpl(kind) {
   if (kind === 'local') {
     if (process.platform === 'linux') await writeRootsConfig(settings);
     else mcpCommand = await buildLocalCommand(settings);
-  } else {
+  } else if (kind === 'browser') {
     mcpCommand = buildBrowserCommand(settings);
+  } else {
+    mcpCommand = buildMetaCommand();
   }
 
   const env = {
@@ -635,7 +660,8 @@ async function startTunnelImpl(kind) {
   });
 
   if (kind === 'local') localProcess = child;
-  else browserProcess = child;
+  else if (kind === 'browser') browserProcess = child;
+  else metaProcess = child;
 
   addLog(kind, `Starting tunnel ${tunnelId}...`);
   child.stdout.on('data', d => addLog(kind, d));
@@ -645,6 +671,7 @@ async function startTunnelImpl(kind) {
     addLog(kind, `Stopped (code=${code}, signal=${signal || 'none'}).`);
     if (kind === 'local' && localProcess === child) localProcess = null;
     else if (kind === 'browser' && browserProcess === child) browserProcess = null;
+    else if (kind === 'meta' && metaProcess === child) metaProcess = null;
     broadcastState();
   });
 
@@ -652,6 +679,23 @@ async function startTunnelImpl(kind) {
 }
 
 async function stopTunnel(kind) {
+  if (kind === 'meta') {
+    const child = metaProcess;
+    if (!isRunning(child)) return;
+    addLog('meta', 'Stopping Meta Manager MCP tunnel...');
+    if (process.platform === 'win32') {
+      await new Promise(resolve => {
+        const killer = spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true });
+        killer.once('close', resolve); killer.once('error', resolve);
+      });
+    } else {
+      try { process.kill(-child.pid, 'SIGTERM'); }
+      catch { try { child.kill('SIGTERM'); } catch {} }
+    }
+    if (metaProcess === child) metaProcess = null;
+    await broadcastState();
+    return;
+  }
   if (kind === 'browser') {
     if (webStopping) return webStopping;
     const task = (async () => {
@@ -721,23 +765,28 @@ async function restartAll() {
   const settings = await loadSettings();
   const localWas = isLocalRunning();
   const browserWas = isRunning(browserProcess);
+  const metaWas = isRunning(metaProcess);
   await stopTunnel('local');
   await stopTunnel('browser');
+  await stopTunnel('meta');
   await new Promise(r => setTimeout(r, 800));
   if (localWas || settings.startLocalOnLaunch) await startTunnel('local');
   if (browserWas || settings.startBrowserOnLaunch) await startTunnel('browser');
+  if (metaWas || settings.startMetaOnLaunch) await startTunnel('meta');
 }
 
 function refreshTrayMenu() {
   if (!tray) return;
   const localOn = isLocalRunning();
   const webOn = isRunning(browserProcess);
+  const metaOn = isRunning(metaProcess);
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Open MCP Bridge', click: showWindow },
     { type: 'separator' },
     { label: localOn ? 'Stop Local MCP' : 'Start Local MCP', click: () => localOn ? stopTunnel('local') : startTunnel('local').catch(e => addLog('local', e.message)) },
     { label: webOn ? 'Stop Web MCP' : 'Start Web MCP', click: () => webOn ? stopTunnel('browser') : startTunnel('browser').catch(e => addLog('browser', e.message)) },
-    { label: 'Restart running services', enabled: localOn || webOn, click: () => restartAll().catch(e => addLog('app', e.message)) },
+    { label: metaOn ? 'Stop Meta Manager MCP' : 'Start Meta Manager MCP', click: () => metaOn ? stopTunnel('meta') : startTunnel('meta').catch(e => addLog('meta', e.message)) },
+    { label: 'Restart running services', enabled: localOn || webOn || metaOn, click: () => restartAll().catch(e => addLog('app', e.message)) },
     { type: 'separator' },
     {
       label: updateState.available
@@ -826,13 +875,9 @@ ipcMain.handle('settings:save', async (_e, incoming) => {
 
   delete settings.apiKey;
 
-  if (
-    settings.localTunnelId &&
-    settings.browserTunnelId &&
-    settings.localTunnelId === settings.browserTunnelId
-  ) {
-    throw new Error('Use a different tunnel ID for Local MCP and Web MCP.');
-  }
+  const ids = [settings.localTunnelId, settings.browserTunnelId, settings.metaTunnelId].filter(Boolean);
+  if (ids.some(id => !/^tunnel_[0-9a-f]{32}$/.test(id))) throw new Error('Invalid tunnel ID: expected tunnel_ followed by 32 lowercase hex characters.');
+  if (new Set(ids).size !== ids.length) throw new Error('Use a different tunnel ID for each service.');
 
   await fsp.mkdir(app.getPath('userData'), { recursive: true });
   await fsp.writeFile(configPath(), JSON.stringify(settings, null, 2), { mode: 0o600 });
@@ -865,6 +910,8 @@ ipcMain.handle('browser:stop', async () => {
   await stopTunnel('browser');
   return { ok: true };
 });
+ipcMain.handle('meta:start', async () => { await startTunnel('meta'); return { ok: true }; });
+ipcMain.handle('meta:stop', async () => { await stopTunnel('meta'); return { ok: true }; });
 ipcMain.handle('servers:restart-all', async () => {
   await restartAll();
   return { ok: true };
@@ -894,6 +941,9 @@ app.whenReady().then(async () => {
   if (settings.startBrowserOnLaunch) {
     startTunnel('browser').catch(e => addLog('browser', e.message));
   }
+  if (settings.startMetaOnLaunch) {
+    startTunnel('meta').catch(e => addLog('meta', e.message));
+  }
   scheduleUpdateChecks();
 });
 
@@ -909,6 +959,7 @@ app.on('before-quit', event => {
     try {
       if (process.platform !== 'linux') await stopTunnel('local');
       await stopTunnel('browser');
+      await stopTunnel('meta');
     } catch (error) {
       addLog('app', `Shutdown cleanup error: ${error.message}`);
     } finally {

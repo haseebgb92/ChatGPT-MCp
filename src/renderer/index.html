@@ -92,7 +92,7 @@
           <div class="card-head">
             <div>
               <h2>Connections</h2>
-              <p>Start or stop the two MCP tunnels independently.</p>
+              <p>Start or stop Local, Web and Meta Manager MCP tunnels independently.</p>
             </div>
           </div>
 
@@ -113,6 +113,12 @@
             </div>
             <button id="browserToggle" class="primary-btn">Start Web</button>
           </div>
+          <div class="service-row">
+            <div class="service-logo mint">◎</div>
+            <div class="service-copy"><strong>Meta Manager MCP</strong><span id="metaTunnelLabel">Tunnel not configured</span></div>
+            <button id="metaToggle" class="primary-btn">Start Meta</button>
+          </div>
+          <p class="soft-note" id="metaHelp">Open Meta Manager on this PC before starting. The secure tunnel forwards its localhost-only MCP at 127.0.0.1:38939. Use a separate tunnel ID; no public port is opened.</p>
         </article>
 
         <article id="browser" class="card">
@@ -159,7 +165,7 @@
         <div class="card-head">
           <div>
             <h2>Recent activity</h2>
-            <p>Live Local MCP and Web MCP runtime events.</p>
+            <p>Live Local MCP, Web MCP and Meta Manager runtime events.</p>
           </div>
           <button id="clearLogs" class="text-btn">Clear view</button>
         </div>
@@ -187,6 +193,9 @@
             <label>Web tunnel ID
               <input id="browserTunnelId" placeholder="tunnel_…" />
             </label>
+            <label>Meta Manager tunnel ID (optional)
+              <input id="metaTunnelId" placeholder="tunnel_…" autocomplete="off" spellcheck="false" />
+            </label>
           </div>
 
           <label class="toggle-line"><input id="rememberApiKey" type="checkbox" /> Remember API key securely</label>
@@ -208,6 +217,7 @@
             <label class="toggle-line"><input id="startAtLogin" type="checkbox" /> Start MCP Bridge when I sign in</label>
             <label class="toggle-line"><input id="startLocalOnLaunch" type="checkbox" /> Start Local MCP automatically</label>
             <label class="toggle-line"><input id="startBrowserOnLaunch" type="checkbox" /> Start Web MCP automatically</label>
+            <label class="toggle-line"><input id="startMetaOnLaunch" type="checkbox" /> Start Meta Manager MCP automatically</label>
           </div>
         </article>
 
