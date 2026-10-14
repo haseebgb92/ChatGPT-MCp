@@ -319,8 +319,16 @@ $('browserToggle').onclick = async () => {
   catch (e) { $('message').textContent = e.message || String(e); }
 };
 $('metaToggle').onclick = async () => {
-  try { state.metaRunning ? await window.bridge.stopMeta() : await window.bridge.startMeta(); }
-  catch (e) { $('message').textContent = e.message || String(e); }
+  try {
+    $('metaHelp').textContent = 'Checking Meta Manager local MCP service and secure tunnel…';
+    const wasRunning = state.metaRunning;
+    wasRunning ? await window.bridge.stopMeta() : await window.bridge.startMeta();
+    $('metaHelp').textContent = wasRunning ? 'Tunnel stopped.' : 'Tunnel launch requested. Check Logs for connection status.';
+  } catch (e) {
+    const reason = e.message || String(e);
+    $('metaHelp').textContent = 'Connection failed: ' + reason;
+    $('message').textContent = reason;
+  }
 };
 
 $('restartAll').onclick = async () => {

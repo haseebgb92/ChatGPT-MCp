@@ -548,14 +548,16 @@ async function startTunnelImpl(kind) {
   } else if (kind === 'browser') {
     mcpCommand = buildBrowserCommand(settings);
   } else {
-    mcpCommand = buildMetaCommand();
+    // Direct localhost MCP transport works on Windows and Linux and requires no proxy process.
+    mcpCommand = '';
   }
 
+  const metaEndpoint = 'http://127.0.0.1:38939/mcp';
   const env = {
     ...process.env,
     CONTROL_PLANE_API_KEY: apiKey,
     CONTROL_PLANE_TUNNEL_ID: tunnelId,
-    ...(mcpCommand ? { MCP_COMMAND: mcpCommand } : {}),
+    ...(kind === 'meta' ? { MCP_SERVER_URL: metaEndpoint } : (mcpCommand ? { MCP_COMMAND: mcpCommand } : {})),
     LOCAL_FOLDER_MCP_CONFIG: rootsPath(),
     ENABLE_WRITE: settings.enableWrite ? 'true' : 'false',
     ENABLE_SHELL: settings.enableShell ? 'true' : 'false',
@@ -648,7 +650,9 @@ async function startTunnelImpl(kind) {
   const args = [
     'run',
     '--control-plane.tunnel-id', tunnelId,
-    '--mcp.command', mcpCommand,
+    ...(kind === 'meta'
+      ? ['--mcp.server-url', 'http://127.0.0.1:38939/mcp']
+      : ['--mcp.command', mcpCommand]),
     '--health.listen-addr', '127.0.0.1:0'
   ];
 

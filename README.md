@@ -440,7 +440,7 @@ Built by **Advertpreneur**.
 1. Install and open **Meta Manager v0.1.21 or later** on the same Windows or Linux computer. In Meta Manager → Settings verify that Local MCP is online.
 2. Create a **separate** tunnel ID using [OpenAI Tunnels](https://platform.openai.com/settings/organization/tunnels). Never reuse your Local or Web tunnel IDs.
 3. In **MCP Bridge → Connection settings**, enter the Meta Manager tunnel ID and your Runtime API key, then select **Save settings**.
-4. Choose **Start Meta** in Connections. The bundled proxy reads the MCP tools from `http://127.0.0.1:38939/mcp` and connects them through the secure OpenAI tunnel.
+4. Choose **Start Meta** in Connections. The tunnel client uses native HTTP transport to `http://127.0.0.1:38939/mcp` over the secure OpenAI tunnel (no extra proxy process required).
 5. Connect the corresponding tunnel in ChatGPT. Both applications must be running to use local MCP tools; posts already scheduled through Meta Manager Cloud do not require either PC to remain on.
 
 The Runtime API key is kept in secure local storage and is never included in installer files or public links. The Meta Manager local MCP service stays bound to 127.0.0.1 rather than a public HTTP listener. The tunnel ID alone is not a credential and cannot establish the connection without a Runtime API key and a running tunnel client.
