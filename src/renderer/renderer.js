@@ -336,6 +336,34 @@ $('restartAll').onclick = async () => {
   catch (e) { $('message').textContent = e.message || String(e); }
 };
 
+$('previewDiagnostics').onclick = async () => {
+  $('diagnosticMessage').textContent = 'Collecting sanitized local diagnostics…';
+  $('reportDiagnostics').disabled = true;
+  $('copyDiagnostics').disabled = true;
+  try {
+    const report = await window.bridge.previewDiagnostics();
+    $('diagnosticPreview').textContent = report;
+    $('diagnosticPreview').hidden = false;
+    $('reportDiagnostics').disabled = false;
+    $('copyDiagnostics').disabled = false;
+    $('diagnosticMessage').textContent = 'Review the report. A GitHub issue is never submitted automatically.';
+  } catch (error) {
+    $('diagnosticMessage').textContent = 'Unable to prepare diagnostics: ' + String(error.message || error);
+  }
+};
+$('copyDiagnostics').onclick = async () => {
+  try { await window.bridge.copyDiagnostics(); $('diagnosticMessage').textContent = 'Sanitized report copied.'; }
+  catch (error) { $('diagnosticMessage').textContent = String(error.message || error); }
+};
+$('reportDiagnostics').onclick = async () => {
+  try {
+    await window.bridge.reportDiagnostics();
+    $('diagnosticMessage').textContent = 'GitHub issue draft opened. You must sign in, review and submit it manually.';
+  } catch (error) {
+    $('diagnosticMessage').textContent = 'Could not open GitHub: ' + String(error.message || error);
+  }
+};
+
 $('clearLogs').onclick = () => $('logs').textContent = '';
 
 ['apiKey','localTunnelId','browserTunnelId','metaTunnelId'].forEach(id => {

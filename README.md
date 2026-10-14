@@ -444,3 +444,16 @@ Built by **Advertpreneur**.
 5. Connect the corresponding tunnel in ChatGPT. Both applications must be running to use local MCP tools; posts already scheduled through Meta Manager Cloud do not require either PC to remain on.
 
 The Runtime API key is kept in secure local storage and is never included in installer files or public links. The Meta Manager local MCP service stays bound to 127.0.0.1 rather than a public HTTP listener. The tunnel ID alone is not a credential and cannot establish the connection without a Runtime API key and a running tunnel client.
+## Combined diagnostics and private GitHub report (v0.2.11)
+
+Meta Manager v0.1.24+ records **structured error categories** for Facebook, Instagram, LinkedIn OAuth and MCP startup. MCP Bridge records its tunnel startup and runtime failures. Both applications keep their diagnostics in their own local app-data folders.
+
+To send a reproducible support report:
+
+1. Reproduce the error in Meta Manager or MCP Bridge.
+2. In MCP Bridge, open **Support diagnostics → Generate report**.
+3. Inspect the preview, which includes only allowlisted error categories, optional HTTP status, timestamps, application version, OS and local MCP reachability.
+4. Choose **Copy sanitized report**, or **Open GitHub issue draft**.
+5. GitHub opens an issue draft in the private Meta Manager repository (GitHub access required). Only you can submit it.
+
+The applications do not automatically post reports, do not include raw process logs, and do not include OAuth codes/states, account names, tokens, Runtime API keys, tunnel IDs, passwords, usernames, email addresses or full file paths. Keep raw traces on your computer and never paste them into public issues.

@@ -152,3 +152,6 @@ footer{display:flex;gap:14px;padding:18px 4px 4px}
 #updateProgressLabel{font-size:10px;color:#6d7b90;text-align:right}
 button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:760px){.update-layout{grid-template-columns:1fr}.update-actions{justify-content:flex-start}}
+.diagnostic-preview{white-space:pre-wrap;overflow:auto;max-height:330px;border:1px solid #dce3eb;border-radius:12px;padding:14px;background:#f8fafc;color:#1f2937;font:12px/1.6 ui-monospace,monospace;margin-top:12px}
+#diagnostics .actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+#diagnostics button:disabled{opacity:.45;cursor:not-allowed}

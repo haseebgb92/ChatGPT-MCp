@@ -172,6 +172,20 @@
         <pre id="logs"></pre>
       </section>
 
+      <section class="card" id="diagnostics">
+        <div class="card-head">
+          <div><h2>Support diagnostics</h2><p>Combine MCP Bridge and Meta Manager failures, then review them before creating a private GitHub issue.</p></div>
+        </div>
+        <p class="soft-note">Privacy: only allowlisted error categories, HTTP status codes, application version and OS are included. No account names, tokens, passwords, OAuth codes, tunnel IDs or raw logs. Nothing is uploaded automatically.</p>
+        <div class="actions">
+          <button id="previewDiagnostics" class="outline-btn">Generate report</button>
+          <button id="copyDiagnostics" class="outline-btn" disabled>Copy sanitized report</button>
+          <button id="reportDiagnostics" class="primary-btn" disabled>Open GitHub issue draft</button>
+        </div>
+        <pre id="diagnosticPreview" class="diagnostic-preview" hidden></pre>
+        <p id="diagnosticMessage" class="soft-note" aria-live="polite">Generate and inspect the report before sharing. GitHub submission is always manual.</p>
+      </section>
+
       <section id="settings" class="settings-grid">
         <article class="card">
           <div class="card-head">

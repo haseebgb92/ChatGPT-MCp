@@ -1,10 +1,11 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, nativeImage, safeStorage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, nativeImage, safeStorage, clipboard } = require('electron');
 const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const net = require('node:net');
 const { checkForUpdate, downloadAndVerify, installUpdate } = require('./updater');
+const { bridgeCategory, parseDiagnosticEvents, createReport } = require('./diagnostics');
 
 const stableUserData = path.join(app.getPath('appData'), 'chatgpt-mcp-bridge');
 app.setPath('userData', stableUserData);
@@ -35,6 +36,7 @@ let webStopping = null;
 let quitCleanupStarted = false;
 let sessionApiKey = '';
 let logs = [];
+let lastDiagnosticReport = null;
 let updateCheckTimer = null;
 let updateInitialTimer = null;
 let updateState = {
@@ -185,7 +187,44 @@ function redact(text) {
   return String(text || '').replace(/sk-[A-Za-z0-9_\-]{10,}/g, 'sk-***');
 }
 
+function bridgeDiagnosticFile() { return path.join(app.getPath('userData'), 'diagnostics.jsonl'); }
+function metaDiagnosticFile() {
+  const roaming = process.env.APPDATA || app.getPath('appData');
+  return path.join(roaming, 'com.advertpreneur.metamanager', 'diagnostics.jsonl');
+}
+async function readDiagnosticHistory(filePath) {
+  try {
+    const stat = await fsp.stat(filePath);
+    if (stat.size > 128 * 1024) return [];
+    return parseDiagnosticEvents(await fsp.readFile(filePath, 'utf8'));
+  } catch { return []; }
+}
+async function buildSharedDiagnostics() {
+  const [bridgeEvents, metaEvents] = await Promise.all([
+    readDiagnosticHistory(bridgeDiagnosticFile()),
+    readDiagnosticHistory(metaDiagnosticFile())
+  ]);
+  let mcpOnline = false;
+  try {
+    const response = await fetch('http://127.0.0.1:38939/health', { signal: AbortSignal.timeout(2500) });
+    const body = await response.json();
+    mcpOnline = response.ok && body?.ok === true && body?.service === 'meta-manager-mcp';
+  } catch { /* Offline is included as a status, not an exception payload. */ }
+  return createReport({ bridgeVersion: app.getVersion(), platform: process.platform, mcpOnline, bridgeEvents, metaEvents });
+}
 function addLog(source, data) {
+  const kind = bridgeCategory(data);
+  if (kind) {
+    const event = { source: 'mcp-bridge', component: ['local','browser','meta','updater'].includes(source) ? source : 'app',
+      kind, at: new Date().toISOString() };
+    const record = JSON.stringify(event) + String.fromCharCode(10);
+    fsp.mkdir(app.getPath('userData'), { recursive: true })
+      .then(async () => {
+        const file = bridgeDiagnosticFile();
+        if (await fsp.stat(file).then(x => x.size > 64 * 1024).catch(() => false)) await fsp.writeFile(file, '');
+        await fsp.appendFile(file, record, { mode: 0o600 });
+      }).catch(() => { /* A log failure never breaks the app. */ });
+  }
   const line = `[${new Date().toLocaleTimeString()}] [${source}] ${redact(String(data).trimEnd())}`;
   logs.push(line);
   if (logs.length > 800) logs = logs.slice(-800);
@@ -914,8 +953,29 @@ ipcMain.handle('browser:stop', async () => {
   await stopTunnel('browser');
   return { ok: true };
 });
-ipcMain.handle('meta:start', async () => { await startTunnel('meta'); return { ok: true }; });
+ipcMain.handle('meta:start', async () => {
+  try { await startTunnel('meta'); return { ok: true }; }
+  catch (error) { addLog('meta', 'Meta Manager tunnel startup error: ' + error.message); throw error; }
+});
 ipcMain.handle('meta:stop', async () => { await stopTunnel('meta'); return { ok: true }; });
+ipcMain.handle('diagnostics:preview', async () => {
+  lastDiagnosticReport = await buildSharedDiagnostics();
+  return lastDiagnosticReport;
+});
+ipcMain.handle('diagnostics:copy', async () => {
+  if (!lastDiagnosticReport) throw new Error('Generate and review diagnostics before copying.');
+  clipboard.writeText(lastDiagnosticReport);
+  return { copied: true };
+});
+ipcMain.handle('diagnostics:github', async () => {
+  if (!lastDiagnosticReport) throw new Error('Generate and review diagnostics first.');
+  // Issue draft only. The user must sign into GitHub, inspect it, and click Submit.
+  const url = new URL('https://github.com/haseebgb92/meta-manager/issues/new');
+  url.searchParams.set('title', 'Windows Meta Manager + MCP Bridge diagnostic report');
+  url.searchParams.set('body', lastDiagnosticReport.slice(0, 3500));
+  await shell.openExternal(url.toString());
+  return { opened: true };
+});
 ipcMain.handle('servers:restart-all', async () => {
   await restartAll();
   return { ok: true };
