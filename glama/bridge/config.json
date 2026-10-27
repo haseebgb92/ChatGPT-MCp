@@ -1,0 +1,8 @@
+{
+  "roots": {
+    "public_examples": {
+      "path": "/opt/mcp/glama/bridge/examples",
+      "mode": "read-only"
+    }
+  }
+}

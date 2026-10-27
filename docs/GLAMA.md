@@ -12,9 +12,9 @@ The bundled MCP server exposes read-only file discovery by default. Optional wri
 
 The root [`glama.json`](../glama.json) follows Glama's official schema and lists the repository's GitHub maintainer. Glama may need a new **Claim ownership** action or repository sync before indexing changes. The claimed listing is already author-verified; this file provides independent machine-readable ownership metadata.
 
-Glama's **Build / Make Release** mechanism executes a containerized copy of an MCP server on Glama infrastructure. That container cannot access the installer's local desktop, the user's approved file roots, or their authenticated Chrome profile. We intentionally do **not** publish a misleading Glama-hosted release or a public shell-enabled container. GitHub installer releases are separate and do not satisfy Glama's hosted-release requirement.
+Glama's **Build / Make Release** mechanism executes a containerized copy of an MCP server on Glama infrastructure. That container cannot access the installer's local desktop, the user's approved file roots, or their authenticated Chrome profile. We provide a **restricted public documentation sample container** with five real read-only tools and two bundled public Markdown files. It is not the full desktop MCP Bridge. A Glama admin build and review are required before publishing this sample as a hosted release. GitHub installer releases are separate and do not satisfy Glama's hosted-release requirement.
 
-Consequently, Glama may continue showing **No Glama release**, **No recent Glama usage**, and unscored server coherence / Tool Definition Quality Score until it supports a suitable local-only introspection workflow. Improving these indicators must not require moving the user's private data or credentials to a public container.
+Glama may still show **No Glama release**, **No recent Glama usage**, and unscored coherence or tool quality until you complete a Glama-hosted build test and explicitly publish the restricted documentation demo. Improving these indicators must not require moving the user's private data or credentials to a public container.
 
 ## Keeping the listing accurate
 
