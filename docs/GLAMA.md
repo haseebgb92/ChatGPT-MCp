@@ -12,17 +12,19 @@ The bundled MCP server exposes read-only file discovery by default. Optional wri
 
 The root [`glama.json`](../glama.json) follows Glama's official schema and lists the repository's GitHub maintainer. Glama may need a new **Claim ownership** action or repository sync before indexing changes. The claimed listing is already author-verified; this file provides independent machine-readable ownership metadata.
 
-Glama's **Build / Make Release** mechanism executes a containerized copy of an MCP server on Glama infrastructure. That container cannot access the installer's local desktop, the user's approved file roots, or their authenticated Chrome profile. We provide a **restricted public documentation sample container** with five real read-only tools and two bundled public Markdown files. It is not the full desktop MCP Bridge. A Glama admin build and review are required before publishing this sample as a hosted release. GitHub installer releases are separate and do not satisfy Glama's hosted-release requirement.
+**Hosted release v0.1.0 was published to Glama on October 27, 2026** after a successful Glama-managed Docker build and real MCP `tools/list` inspection. The hosted sample provides five read-only tools against two bundled public Markdown documents. It does not access the user's desktop, files, Chrome, shell, local network, or credentials.
 
-Glama may still show **No Glama release**, **No recent Glama usage**, and unscored coherence or tool quality until you complete a Glama-hosted build test and explicitly publish the restricted documentation demo. Improving these indicators must not require moving the user's private data or credentials to a public container.
+The separate **full desktop MCP Bridge** continues to require installation and approved local tunnel connections. The Glama-hosted edition is a limited, public protocol demonstration, never a substitute for desktop access. GitHub installer releases are not Glama releases.
+
+Glama's Tool Definition Quality Score and server coherence may be evaluated after publication. Recent usage and related-server signals are separate and must reflect genuine activity; no simulated usage or private data disclosure is appropriate just to raise a score.
 
 ## Keeping the listing accurate
 
-1. Push the current README, `glama.json`, and MCP tool descriptions to GitHub.
-2. From the Glama admin page, use **Claim ownership** or repository sync to refresh metadata after a change.
-3. Verify that the public listing reflects the latest release and that deployment is explicitly marked local-only.
-4. Add only genuinely related servers through Glama's **Related Servers** interface.
-5. Never submit a real Runtime API key, tunnel ID, local folder path, Chrome session, or browser cookie as a Glama build setting.
+1. Keep the Glama listing and README explicit about the **limited hosted demonstration** versus the **full locally installed desktop app**.
+2. Use Glama's **Sync Server** after future GitHub changes; keep the pinned commit field empty when building from the latest checked-in source.
+3. Run and inspect a fresh Glama build test before publishing a replacement hosted release.
+4. Add only genuinely related servers, and let real usage metrics accumulate naturally.
+5. Never submit Runtime API keys, tunnel IDs, personal folder paths, Chrome sessions or browser cookies as Glama build settings.
 
 Please do not use public browser simulations to manufacture usage numbers or publish unprotected write/shell tools simply to raise a discovery score.
 

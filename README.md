@@ -17,14 +17,11 @@
 
 ## On Glama
 
-**Public hosted demo:** an isolated [read-only sample](glama/bridge/README.md) exposes the actual Local Files MCP tools against bundled example Markdown only. The Glama hosted edition cannot access your local computer, credentials, Chrome session or shell.
+**Glama hosted release v0.1.0 is published.** This [restricted, read-only documentation sample](glama/bridge/README.md) exposes five genuine MCP tools against two bundled public Markdown files. It does **not** access visitors' computers, private folders, Chrome sessions, shell, OpenAI tunnels or credentials.
 
+[View the Glama listing](https://glama.ai/mcp/servers/haseebgb92/ChatGPT-MCp) · [Hosted release details](https://glama.ai/mcp/servers/haseebgb92/ChatGPT-MCp/admin/releases) · [Installation and security differences](docs/GLAMA.md)
 
-[View our Glama MCP listing](https://glama.ai/mcp/servers/haseebgb92/ChatGPT-MCp) · [Glama-specific setup and limitations](docs/GLAMA.md)
-
-**MCP Bridge is local-first, not a Glama-hosted connector.** Install the desktop app on the machine you control, authorize specific file roots and other optional capabilities, and connect through your own OpenAI Secure MCP Tunnel. The local files, logged-in Chrome session and shell tools are not remotely available to a Glama-hosted container. The Glama listing is for discovery; one-click hosted deployment would not provide the real desktop integrations.
-
-The repository includes a validated `glama.json` maintainer declaration. Glama's separate hosted-release requirement does not mean the GitHub desktop installers are missing.
+**The full MCP Bridge remains a separate local desktop application.** Install it on Linux or Windows, approve specific folder roots and optional terminal or browser access, and connect using your own authorized OpenAI Secure MCP Tunnel. Glama's hosted sample is for protocol demonstration and tool inspection, not remote control of a desktop.
 
 ## What is MCP Bridge?
 
