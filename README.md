@@ -15,16 +15,25 @@
 
 <a href="https://haseebgb92.github.io/ChatGPT-MCp/"><img src="docs/images/mcp-bridge-dashboard-v0.2.png" width="100%" alt="MCP Bridge desktop dashboard for local files and Chrome MCP connections"></a>
 
+## On Glama
+
+[View our Glama MCP listing](https://glama.ai/mcp/servers/haseebgb92/ChatGPT-MCp) · [Glama-specific setup and limitations](docs/GLAMA.md)
+
+**MCP Bridge is local-first, not a Glama-hosted connector.** Install the desktop app on the machine you control, authorize specific file roots and other optional capabilities, and connect through your own OpenAI Secure MCP Tunnel. The local files, logged-in Chrome session and shell tools are not remotely available to a Glama-hosted container. The Glama listing is for discovery; one-click hosted deployment would not provide the real desktop integrations.
+
+The repository includes a validated `glama.json` maintainer declaration. Glama's separate hosted-release requirement does not mean the GitHub desktop installers are missing.
+
 ## What is MCP Bridge?
 
 MCP Bridge is a desktop app for **Linux and Windows** that keeps powerful local tools on your own computer while making them available to ChatGPT through **OpenAI Secure MCP Tunnel**.
 
-It exposes three independent connections:
+It can manage three independent connections (the third requires Meta Manager):
 
 | Connection | What it does |
 |---|---|
 | **Local MCP** | Browse/search approved folders, read files, optionally create/edit files, and optionally run terminal commands. |
 | **Web MCP** | Control your existing Chrome session through Chrome DevTools MCP: tabs, navigation, clicks, typing, screenshots, console/network inspection, and optional vision tools. |
+| **Meta Manager MCP** | Optional connection to a separately installed and running Meta Manager local MCP service. |
 
 Your files, browser session, and terminal remain on your machine. MCP Bridge only exposes the roots and capabilities you explicitly allow.
 
@@ -423,9 +432,9 @@ See [SECURITY.md](SECURITY.md) for details.
 
 ## Current release
 
-**v0.2.1**
+**v0.2.11**
 
-This release adds the verified cross-platform updater on top of the v0.2.0 redesign, standalone desktop identity, tray workflow, and Linux mounted-drive support.
+The latest public release includes the desktop updater, local files and Chrome connections, optional Meta Manager MCP integration, and privacy-reviewed support diagnostics. See [all release notes](https://github.com/haseebgb92/ChatGPT-MCp/releases) for details.
 
 [Download the latest release](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest)
 

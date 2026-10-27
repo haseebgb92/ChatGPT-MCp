@@ -28,14 +28,18 @@ function fail(error) { return { isError: true, content: [{ type: 'text', text: e
 
 function createMcpServer() {
 const server = new McpServer({ name: 'local-folder-mcp', version: '0.3.1' });
+const READ_ONLY_TOOL_HINTS = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const WRITE_FILE_TOOL_HINTS = { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false };
+const CREATE_FOLDER_TOOL_HINTS = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+const COMMAND_TOOL_HINTS = { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true };
 
-server.tool('list_roots', 'List allowed local folders and whether each is read-only or read-write.', {}, async () => {
+server.tool('list_roots', 'List the approved root names and access modes. Call this before other file tools to discover valid root values; filesystem paths and file contents are not returned.', {}, READ_ONLY_TOOL_HINTS, async () => {
   try { return ok(Object.entries(config.roots).map(([name, item]) => ({ name, mode: item.mode }))); } catch (e) { return fail(e); }
 });
 
-server.tool('list_files', 'List files and folders inside an allowed root.', {
-  root: z.string(), path: z.string().default('.')
-}, async ({ root: rootName, path: relativePath }) => {
+server.tool('list_files', 'List up to 1,500 immediate files and directories in an approved root, including relative path, type, size and modification time. Use search_files for recursive discovery. Does not change files.', {
+  root: z.string().describe('Name of a configured approved root returned by list_roots.'), path: z.string().describe('Relative file or directory path inside the approved root.').default('.').describe('Relative directory or subtree within the root; defaults to its top level.')
+}, READ_ONLY_TOOL_HINTS, async ({ root: rootName, path: relativePath }) => {
   try {
     const root = getRoot(rootName);
     const { root: realRoot, target } = await resolveInside(root.path, relativePath);
@@ -56,7 +60,7 @@ server.tool('list_files', 'List files and folders inside an allowed root.', {
   } catch (e) { return fail(e); }
 });
 
-server.tool('file_info', 'Return metadata for a file or directory.', { root: z.string(), path: z.string() }, async ({ root: rootName, path: relativePath }) => {
+server.tool('file_info', 'Inspect a file or directory in an approved root and return its type, size and modification time without reading its contents. Use read_file for UTF-8 content. Read-only.', { root: z.string().describe('Name of a configured approved root returned by list_roots.'), path: z.string().describe('Relative file or directory path inside the approved root.') }, READ_ONLY_TOOL_HINTS, async ({ root: rootName, path: relativePath }) => {
   try {
     const root = getRoot(rootName);
     const { root: realRoot, target } = await resolveInside(root.path, relativePath);
@@ -65,7 +69,7 @@ server.tool('file_info', 'Return metadata for a file or directory.', { root: z.s
   } catch (e) { return fail(e); }
 });
 
-server.tool('read_file', 'Read a UTF-8 text file. Large files are truncated.', { root: z.string(), path: z.string() }, async ({ root: rootName, path: relativePath }) => {
+server.tool('read_file', 'Read text from an approved local root as UTF-8, truncating at MAX_READ_BYTES (512 KB by default) with a clear truncation marker. Use search_files first to locate passages; binary files are not supported. Read-only.', { root: z.string().describe('Name of a configured approved root returned by list_roots.'), path: z.string().describe('Relative file or directory path inside the approved root.') }, READ_ONLY_TOOL_HINTS, async ({ root: rootName, path: relativePath }) => {
   try {
     const root = getRoot(rootName);
     const { target } = await resolveInside(root.path, relativePath);
@@ -83,9 +87,9 @@ server.tool('read_file', 'Read a UTF-8 text file. Large files are truncated.', {
   } catch (e) { return fail(e); }
 });
 
-server.tool('search_files', 'Search filenames and UTF-8 text contents recursively within an allowed root.', {
-  root: z.string(), query: z.string().min(1), path: z.string().default('.'), max_results: z.number().int().min(1).max(200).default(50)
-}, async ({ root: rootName, query, path: relativePath, max_results }) => {
+server.tool('search_files', 'Recursively search filenames and UTF-8 contents inside an approved root with case-insensitive substring matching. Returns relative paths and brief snippets, bounded by max_results and a file scan limit; skips symlinks and build folders. Use read_file for complete text.', {
+  root: z.string().describe('Name of a configured approved root returned by list_roots.'), query: z.string().min(1).describe('Case-insensitive filename or UTF-8 content substring to find.'), path: z.string().describe('Relative file or directory path inside the approved root.').default('.').describe('Relative directory or subtree within the root; defaults to its top level.'), max_results: z.number().int().min(1).max(200).default(50).describe('Maximum matching files, from 1 to 200; defaults to 50.')
+}, READ_ONLY_TOOL_HINTS, async ({ root: rootName, query, path: relativePath, max_results }) => {
   try {
     const root = getRoot(rootName);
     const { root: realRoot, target } = await resolveInside(root.path, relativePath);
@@ -123,7 +127,7 @@ server.tool('search_files', 'Search filenames and UTF-8 text contents recursivel
 });
 
 if (ENABLE_WRITE) {
-  server.tool('write_file', 'Create or replace a UTF-8 text file in a read-write root.', { root: z.string(), path: z.string(), content: z.string() }, async ({ root: rootName, path: relativePath, content }) => {
+  server.tool('write_file', 'Create or overwrite a complete UTF-8 file within an approved read-write root. Changes local user data and replaces existing content, so inspect or obtain approval before overwriting. Available only when writing is explicitly enabled.', { root: z.string().describe('Name of a configured approved root returned by list_roots.'), path: z.string().describe('Relative file or directory path inside the approved root.'), content: z.string().describe('Complete UTF-8 replacement file text, not text to append.') }, WRITE_FILE_TOOL_HINTS, async ({ root: rootName, path: relativePath, content }) => {
     try {
       const root = getRoot(rootName);
       if (root.mode !== 'read-write') throw new Error(`Root '${rootName}' is read-only.`);
@@ -134,7 +138,7 @@ if (ENABLE_WRITE) {
     } catch (e) { return fail(e); }
   });
 
-  server.tool('create_folder', 'Create a directory inside a read-write root.', { root: z.string(), path: z.string() }, async ({ root: rootName, path: relativePath }) => {
+  server.tool('create_folder', 'Create a directory and missing parent directories within an approved read-write root. Modifies the filesystem but does not delete existing files; only available when writing is explicitly enabled.', { root: z.string().describe('Name of a configured approved root returned by list_roots.'), path: z.string().describe('Relative file or directory path inside the approved root.') }, CREATE_FOLDER_TOOL_HINTS, async ({ root: rootName, path: relativePath }) => {
     try {
       const root = getRoot(rootName);
       if (root.mode !== 'read-write') throw new Error(`Root '${rootName}' is read-only.`);
@@ -160,10 +164,10 @@ function restrictedCommandGuard(command) {
 
 if (ENABLE_SHELL) {
   server.tool('run_command', FULL_SHELL
-    ? 'Run a terminal command with the current OS user privileges. WARNING: this is not sandboxed to the selected root.'
-    : 'Run a terminal command starting in an allowed root. Common destructive system commands are blocked, but this is not a security sandbox.', {
-      root: z.string(), cwd: z.string().default('.'), command: z.string().min(1), timeout_seconds: z.number().int().min(1).max(300).default(120)
-    }, async ({ root: rootName, cwd, command, timeout_seconds }) => {
+    ? 'Execute a terminal command as the current operating-system user, starting in an approved read-write root. Full Shell has no sandbox and may affect files outside this root. Use only for authorized tasks; prefer dedicated file tools when possible.'
+    : 'Run an authorized terminal command with current-user permissions, from an approved read-write root. The restricted-command filter blocks only some unsafe patterns and is not a sandbox. Prefer file tools for narrower operations.', {
+      root: z.string().describe('Name of a configured approved root returned by list_roots.'), cwd: z.string().default('.').describe('Relative working directory inside the approved root.'), command: z.string().min(1).describe('Command to run in Bash on Linux or PowerShell on Windows, with the local user privileges.'), timeout_seconds: z.number().int().min(1).max(300).default(120).describe('Maximum execution time in seconds (1-300, default 120).')
+    }, COMMAND_TOOL_HINTS, async ({ root: rootName, cwd, command, timeout_seconds }) => {
       try {
         const root = getRoot(rootName);
         if (root.mode !== 'read-write') throw new Error(`Root '${rootName}' is read-only.`);

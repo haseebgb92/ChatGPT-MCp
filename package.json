@@ -19,7 +19,7 @@
   "homepage": "https://github.com/haseebgb92/ChatGPT-MCp#readme",
   "scripts": {
     "start": "electron .",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/updater.js && node --check src/renderer/renderer.js && node --check bundled/local-mcp/server.js && node --check bundled/local-mcp/config.js && node --check bundled/local-mcp/security.js && node --check bundled/meta-manager-proxy/server.js && node --check src/diagnostics.js && node --test tests/diagnostics.test.js",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/updater.js && node --check src/renderer/renderer.js && node --check bundled/local-mcp/server.js && node --check bundled/local-mcp/config.js && node --check bundled/local-mcp/security.js && node --check bundled/meta-manager-proxy/server.js && node --check src/diagnostics.js && node --test tests/diagnostics.test.js tests/glama-mcp-schema.test.mjs",
     "dist:linux": "electron-builder --linux AppImage deb --publish never",
     "dist:win": "electron-builder --win nsis --publish never",
     "dist:linux:deb": "electron-builder --linux deb --publish never"
