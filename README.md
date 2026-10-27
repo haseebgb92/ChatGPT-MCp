@@ -1,12 +1,19 @@
-# MCP Bridge
+<p align="center">
+  <img src="docs/images/mcp-bridge-icon.png" width="104" height="104" alt="MCP Bridge application icon">
+</p>
+<h1 align="center">MCP Bridge</h1>
 
-![MCP Bridge icon](docs/images/mcp-bridge-icon.png)
+<p align="center"><strong>Securely connect ChatGPT to your local files, terminal, and existing Chrome session through OpenAI Secure MCP Tunnel.</strong></p>
 
-**Securely connect ChatGPT to your local files, terminal, and existing Chrome session through OpenAI Secure MCP Tunnel.**
+<p align="center">
+  <a href="https://github.com/haseebgb92/ChatGPT-MCp/actions/workflows/build.yml"><img src="https://github.com/haseebgb92/ChatGPT-MCp/actions/workflows/build.yml/badge.svg" alt="Build installers status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/haseebgb92/ChatGPT-MCp?style=flat-square" alt="MIT license"></a>
+  <a href="#quick-start"><img src="https://img.shields.io/badge/platform-Linux%20%7C%20Windows-5367d5?style=flat-square" alt="Linux and Windows"></a>
+</p>
 
-[Website](https://haseebgb92.github.io/ChatGPT-MCp/) · [Latest Release](https://github.com/haseebgb92/ChatGPT-MCp/releases/latest) · [Glama](https://glama.ai/mcp/servers/haseebgb92/ChatGPT-MCp) · [Security](SECURITY.md) · [Issues](https://github.com/haseebgb92/ChatGPT-MCp/issues)
+<p align="center"><a href="https://haseebgb92.github.io/ChatGPT-MCp/">Website</a> · <a href="https://github.com/haseebgb92/ChatGPT-MCp/releases/latest">Latest Release</a> · <a href="https://glama.ai/mcp/servers/haseebgb92/ChatGPT-MCp">Glama</a> · <a href="SECURITY.md">Security</a> · <a href="https://github.com/haseebgb92/ChatGPT-MCp/issues">Issues</a></p>
 
-![MCP Bridge dashboard](docs/images/mcp-bridge-dashboard-v0.2.png)
+<a href="https://haseebgb92.github.io/ChatGPT-MCp/"><img src="docs/images/mcp-bridge-dashboard-v0.2.png" width="100%" alt="MCP Bridge desktop dashboard for local files and Chrome MCP connections"></a>
 
 ## What is MCP Bridge?
 
