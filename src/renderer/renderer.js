@@ -143,11 +143,12 @@ function renderRoots() {
         <option value="read-only" ${r.mode === 'read-only' ? 'selected' : ''}>Read only</option>
       </select>
       <button class="remove-root">Remove</button>`;
-    row.querySelector('.root-name').oninput = e => roots[i].name = e.target.value;
-    row.querySelector('.root-mode').onchange = e => roots[i].mode = e.target.value;
+    row.querySelector('.root-name').oninput = e => { roots[i].name = e.target.value; window.markBridgeUnsaved?.(); };
+    row.querySelector('.root-mode').onchange = e => { roots[i].mode = e.target.value; window.markBridgeUnsaved?.(); };
     row.querySelector('.remove-root').onclick = () => {
       roots.splice(i, 1);
       renderRoots();
+      window.markBridgeUnsaved?.();
     };
     holder.appendChild(row);
   });
@@ -206,6 +207,7 @@ function renderMountedDrives() {
         });
         renderRoots();
         renderMountedDrives();
+        window.markBridgeUnsaved?.();
       };
     }
     holder.appendChild(card);
@@ -254,6 +256,7 @@ $('addFolder').onclick = async () => {
       mode: selected.writable ? 'read-write' : 'read-only'
     });
     renderRoots();
+    window.markBridgeUnsaved?.();
   } catch (e) {
     $('message').textContent = e.message || String(e);
   }
@@ -304,6 +307,7 @@ $('save').onclick = async () => {
     $('browserTunnelId').dataset.dirty = '';
     $('metaTunnelId').dataset.dirty = '';
     $('message').textContent = 'Saved.';
+    window.bridgeMarkSaved?.();
   } catch (e) {
     $('message').textContent = e.message || String(e);
   }
@@ -374,13 +378,7 @@ document.querySelectorAll('button.link').forEach(b => {
   b.onclick = () => window.bridge.openExternal(b.dataset.url);
 });
 
-document.querySelectorAll('.nav-item').forEach(button => {
-  button.onclick = () => {
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-    button.classList.add('active');
-    document.getElementById(button.dataset.target)?.scrollIntoView({behavior:'smooth', block:'start'});
-  };
-});
+// Navigation is handled by navigation.js with isolated tab panels and keyboard support.
 
 window.bridge.onState(next => {
   setStatus(next);

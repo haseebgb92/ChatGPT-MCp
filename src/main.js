@@ -862,10 +862,11 @@ function showWindow() {
 
 async function createWindow() {
   win = new BrowserWindow({
-    width: 1180,
-    height: 820,
-    minWidth: 960,
-    minHeight: 680,
+    width: 1280,
+    height: 840,
+    minWidth: 640,
+    minHeight: 540,
+    backgroundColor: '#f5f7fb',
     show: false,
     title: 'MCP Bridge',
     icon: path.join(app.getAppPath(), 'assets', 'icon.png'),

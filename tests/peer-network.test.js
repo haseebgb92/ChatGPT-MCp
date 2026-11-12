@@ -25,7 +25,7 @@ test('private config saved with restricted permissions; screen and control off b
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mcp-peers-'));
   const copied = [];
   const net = createPeerNetwork({
-    userData: dir, clipboard: { writeText: t => copied.push(t) },
+    userData: dir, listenerPort: 0, clipboard: { writeText: t => copied.push(t) },
     desktopCapturer: { getSources: async () => [] },
     screen: { getPrimaryDisplay: () => ({ size: { width: 1920, height: 1080 }, bounds: { x: 0, y: 0 } }) }
   });
@@ -41,9 +41,9 @@ test('private config saved with restricted permissions; screen and control off b
     if (status.running) {
       await net.invite();
       assert.match(copied[0], /^mcppeer:\/\/100\./);
-      const unauth = await fetch('http://' + status.tailscaleIp + ':44176/v1/status');
+      const unauth = await fetch('http://' + status.tailscaleIp + ':' + status.port + '/v1/status');
       assert.equal(unauth.status, 401);
-      const unpaired = await fetch('http://' + status.tailscaleIp + ':44176/v1/status', {
+      const unpaired = await fetch('http://' + status.tailscaleIp + ':' + status.port + '/v1/status', {
         headers: { authorization: 'Bearer ' + c.token }
       });
       assert.equal(unpaired.status, 403);

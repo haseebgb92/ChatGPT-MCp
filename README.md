@@ -457,3 +457,18 @@ To send a reproducible support report:
 5. GitHub opens an issue draft in the private Meta Manager repository (GitHub access required). Only you can submit it.
 
 The applications do not automatically post reports, do not include raw process logs, and do not include OAuth codes/states, account names, tokens, Runtime API keys, tunnel IDs, passwords, usernames, email addresses or full file paths. Keep raw traces on your computer and never paste them into public issues.
+
+
+## Workspace UI — v0.2.13
+
+The desktop interface now uses seven isolated views instead of scrolling through a long dashboard: **Overview**, **Connections**, **Local folders**, **Browser**, **Team peers**, **Activity** and **Settings**. Each view has a dedicated header, focused controls, and its own scroll position. The sidebar collapses to icons at medium window sizes and becomes a horizontally scrollable tab bar in compact layouts.
+
+All Local/Web/Meta Manager tunnel operations and Team Peers IPC remain unchanged. The header reports live tunnel status. Editing a setting or folder displays **Save changes**; `Ctrl+S` / `Cmd+S` also saves from any view. Keyboard users can move between tab headers with the arrow keys, Home/End, or use `Alt+1` through `Alt+7`. Direct tab links use URL hashes (for example `#peers`). Tab transitions respect reduced-motion settings.
+
+Verify responsive behavior and original renderer controls without connecting to real tunnels:
+
+```bash
+python3 tests/ui_layout_cdp.py
+```
+
+This isolated test uses local Chrome DevTools and a mocked Bridge interface. It checks seven views at 390, 700, 900, 1152 and 1440 px, guards against overflow and script errors, verifies keyboard navigation, dirty state, and Save integration. The test does not read production API keys or write production configuration. The Electron app uses the existing Local MCP code and current saved settings.

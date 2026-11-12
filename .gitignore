@@ -11,4 +11,7 @@ Thumbs.db
 bundled/meta-manager-proxy-server.js.tmp
 /vendor/
 /__pycache__/
-/activate-v0.2.12.py
+/activate-v*.py
+
+# Isolated UI smoke-test images
+/tests/screenshots/

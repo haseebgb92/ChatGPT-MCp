@@ -1,359 +1,386 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MCP Bridge</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="peers.css" />
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>MCP Bridge</title>
+<link href="styles.css" rel="stylesheet"/>
+<link href="peers.css" rel="stylesheet"/>
+<link href="app-shell.css" rel="stylesheet"/></head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <img src="../../assets/icon.svg" alt="" class="brand-icon" />
-        <div>
-          <strong>MCP Bridge</strong>
-          <span>Secure Local + Web MCP</span>
-        </div>
-      </div>
-
-      <nav>
-        <button class="nav-item active" data-target="overview"><span>⌂</span>Overview</button>
-        <button class="nav-item" data-target="connections"><span>↗</span>Connections</button>
-        <button class="nav-item" data-target="folders"><span>▣</span>Local Folders</button>
-        <button class="nav-item" data-target="browser"><span>◎</span>Browser</button>
-        <button class="nav-item" data-target="peers"><span>⇄</span>Team peers</button>
-        <button class="nav-item" data-target="activity"><span>⌁</span>Activity</button>
-        <button class="nav-item" data-target="settings"><span>⚙</span>Settings</button>
-      </nav>
-
-      <div class="sidebar-status">
-        <span id="sidebarDot" class="live-dot"></span>
-        <div>
-          <strong id="sidebarStatus">Services stopped</strong>
-          <span id="sidebarSub">Local + Web MCP</span>
-        </div>
-      </div>
-    </aside>
-
-    <main class="content">
-      <section id="overview" class="hero panel-less">
-        <div>
-          <div class="eyebrow">MCP BRIDGE</div>
-          <h1>Your local bridge, under control.</h1>
-          <p>Securely expose selected folders and your browser session to ChatGPT through OpenAI Secure MCP Tunnel.</p>
-        </div>
-        <button id="restartAll" class="ghost-btn">Restart running services</button>
-      </section>
-
-      <section class="stats-grid panel-less">
-        <article class="stat-card">
-          <div class="stat-icon blue">▣</div>
-          <div>
-            <span class="stat-label">Local MCP</span>
-            <strong id="localState">Stopped</strong>
-            <small id="localMeta">No local tunnel active</small>
-          </div>
-          <span id="localDot" class="status-pill">Offline</span>
-        </article>
-
-        <article class="stat-card">
-          <div class="stat-icon violet">◎</div>
-          <div>
-            <span class="stat-label">Web MCP</span>
-            <strong id="browserState">Stopped</strong>
-            <small id="browserMeta">No browser tunnel active</small>
-          </div>
-          <span id="browserDot" class="status-pill">Offline</span>
-        </article>
-
-        <article class="stat-card">
-          <div class="stat-icon mint">⌘</div>
-          <div>
-            <span class="stat-label">Runtime API key</span>
-            <strong id="keyState">Not configured</strong>
-            <small>Stored locally with OS encryption</small>
-          </div>
-          <span id="keyPill" class="status-pill">Missing</span>
-        </article>
-
-        <article class="stat-card">
-          <div class="stat-icon cyan">◇</div>
-          <div>
-            <span class="stat-label">Allowed roots</span>
-            <strong id="rootCount">0 folders</strong>
-            <small id="mountCount">Checking mounted drives…</small>
-          </div>
-          <span class="status-pill good">Protected</span>
-        </article>
-      </section>
-
-      <section id="connections" class="grid-two">
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <h2>Connections</h2>
-              <p>Start or stop Local, Web and Meta Manager MCP tunnels independently.</p>
-            </div>
-          </div>
-
-          <div class="service-row">
-            <div class="service-logo blue">▣</div>
-            <div class="service-copy">
-              <strong>Local MCP</strong>
-              <span id="localTunnelLabel">Tunnel not configured</span>
-            </div>
-            <button id="localToggle" class="primary-btn">Start Local</button>
-          </div>
-
-          <div class="service-row">
-            <div class="service-logo violet">◎</div>
-            <div class="service-copy">
-              <strong>Web MCP</strong>
-              <span id="browserTunnelLabel">Tunnel not configured</span>
-            </div>
-            <button id="browserToggle" class="primary-btn">Start Web</button>
-          </div>
-          <div class="service-row">
-            <div class="service-logo mint">◎</div>
-            <div class="service-copy"><strong>Meta Manager MCP</strong><span id="metaTunnelLabel">Tunnel not configured</span></div>
-            <button id="metaToggle" class="primary-btn">Start Meta</button>
-          </div>
-          <p class="soft-note" id="metaHelp">Open Meta Manager on this PC before starting. The tunnel connects directly to Meta Manager's localhost-only MCP at 127.0.0.1:38939. Use a separate tunnel ID; no public port is opened.</p>
-        </article>
-
-        <article id="browser" class="card">
-          <div class="card-head">
-            <div>
-              <h2>Browser connection</h2>
-              <p>Chrome DevTools MCP uses your existing Chrome session.</p>
-            </div>
-          </div>
-          <div class="info-stack">
-            <div class="info-row"><span>Vision tools</span><strong id="visionStatus">Enabled</strong></div>
-            <div class="info-row"><span>Usage statistics</span><strong id="statsStatus">Disabled</strong></div>
-            <div class="info-row"><span>Tunnel client</span><strong id="clientStatus">Detected</strong></div>
-          </div>
-          <p class="soft-note">For automatic browser control, Chrome remote debugging must be enabled at <b>chrome://inspect/#remote-debugging</b>.</p>
-        </article>
-      </section>
-
-      <section id="folders" class="card">
-        <div class="card-head">
-          <div>
-            <h2>Local folders</h2>
-            <p>Only folders listed here are available through Local MCP.</p>
-          </div>
-          <button id="addFolder" class="outline-btn">+ Add folder</button>
-        </div>
-        <div id="roots" class="roots-list"></div>
-      </section>
-
-      <section class="card">
-        <div class="card-head">
-          <div>
-            <h2>Mounted drives</h2>
-            <p>External SSDs and mounted volumes detected by Linux.</p>
-          </div>
-          <button id="refreshDrives" class="outline-btn">Refresh</button>
-        </div>
-        <div id="mountedDrives" class="drive-grid">
-          <div class="empty-state">Checking mounted drives…</div>
-        </div>
-      </section>
-
-      <section id="activity" class="card">
-        <div class="card-head">
-          <div>
-            <h2>Recent activity</h2>
-            <p>Live Local MCP, Web MCP and Meta Manager runtime events.</p>
-          </div>
-          <button id="clearLogs" class="text-btn">Clear view</button>
-        </div>
-        <pre id="logs"></pre>
-      </section>
-
-      <section class="card" id="diagnostics">
-        <div class="card-head">
-          <div><h2>Support diagnostics</h2><p>Combine MCP Bridge and Meta Manager failures, then review them before creating a private GitHub issue.</p></div>
-        </div>
-        <p class="soft-note">Privacy: only allowlisted error categories, HTTP status codes, application version and OS are included. No account names, tokens, passwords, OAuth codes, tunnel IDs or raw logs. Nothing is uploaded automatically.</p>
-        <div class="actions">
-          <button id="previewDiagnostics" class="outline-btn">Generate report</button>
-          <button id="copyDiagnostics" class="outline-btn" disabled>Copy sanitized report</button>
-          <button id="reportDiagnostics" class="primary-btn" disabled>Open GitHub issue draft</button>
-        </div>
-        <pre id="diagnosticPreview" class="diagnostic-preview" hidden></pre>
-        <p id="diagnosticMessage" class="soft-note" aria-live="polite">Generate and inspect the report before sharing. GitHub submission is always manual.</p>
-      </section>
-
-      <section id="settings" class="settings-grid">
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <h2>Connection settings</h2>
-              <p>Runtime key and OpenAI Secure MCP Tunnel IDs.</p>
-            </div>
-          </div>
-
-          <label>Runtime API key
-            <input id="apiKey" type="password" autocomplete="off" placeholder="sk-proj-…" />
-            <small>Saved using your operating system's secure storage.</small>
-          </label>
-
-          <div class="field-grid">
-            <label>Local tunnel ID
-              <input id="localTunnelId" placeholder="tunnel_…" />
-            </label>
-            <label>Web tunnel ID
-              <input id="browserTunnelId" placeholder="tunnel_…" />
-            </label>
-            <label>Meta Manager tunnel ID (optional)
-              <input id="metaTunnelId" placeholder="tunnel_…" autocomplete="off" spellcheck="false" />
-            </label>
-          </div>
-
-          <label class="toggle-line"><input id="rememberApiKey" type="checkbox" /> Remember API key securely</label>
-        </article>
-
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <h2>Permissions & startup</h2>
-              <p>Choose what Local MCP is allowed to do.</p>
-            </div>
-          </div>
-          <div class="toggle-stack">
-            <label class="toggle-line"><input id="enableWrite" type="checkbox" /> Create and write files</label>
-            <label class="toggle-line"><input id="enableShell" type="checkbox" /> Terminal tool</label>
-            <label class="toggle-line danger"><input id="fullShell" type="checkbox" /> Full shell access</label>
-            <label class="toggle-line"><input id="browserVision" type="checkbox" /> Browser coordinate / vision tools</label>
-            <label class="toggle-line"><input id="browserUsageStatistics" type="checkbox" /> Chrome MCP usage statistics</label>
-            <label class="toggle-line"><input id="startAtLogin" type="checkbox" /> Start MCP Bridge when I sign in</label>
-            <label class="toggle-line"><input id="startLocalOnLaunch" type="checkbox" /> Start Local MCP automatically</label>
-            <label class="toggle-line"><input id="startBrowserOnLaunch" type="checkbox" /> Start Web MCP automatically</label>
-            <label class="toggle-line"><input id="startMetaOnLaunch" type="checkbox" /> Start Meta Manager MCP automatically</label>
-          </div>
-        </article>
-
-        <article class="card span-two update-card">
-          <div class="card-head">
-            <div>
-              <h2>Updates</h2>
-              <p>Keep MCP Bridge current on Linux and Windows.</p>
-            </div>
-            <span id="updateBadge" class="status-pill">Not checked</span>
-          </div>
-
-          <div class="update-layout">
-            <div class="update-copy">
-              <div class="info-row"><span>Current version</span><strong id="currentVersion">—</strong></div>
-              <div class="info-row"><span>Latest release</span><strong id="latestVersion">—</strong></div>
-              <div class="info-row"><span>Status</span><strong id="updateStatusText">Updates have not been checked yet.</strong></div>
-              <label class="toggle-line"><input id="automaticUpdateChecks" type="checkbox" /> Check for updates automatically</label>
-            </div>
-            <div class="update-actions">
-              <button id="checkUpdates" class="outline-btn">Check for updates</button>
-              <button id="downloadUpdate" class="primary-btn" hidden>Download update</button>
-              <button id="installUpdate" class="primary-btn" hidden>Install & restart</button>
-            </div>
-          </div>
-
-          <div id="updateProgressWrap" class="update-progress-wrap" hidden>
-            <div class="update-progress-track"><div id="updateProgressBar" class="update-progress-bar"></div></div>
-            <span id="updateProgressLabel">0%</span>
-          </div>
-          <p class="soft-note">Downloads are verified with the SHA-256 checksum published with each GitHub Release before installation is allowed.</p>
-        </article>
-
-        <article class="card span-two">
-          <div class="card-head">
-            <div>
-              <h2>Advanced</h2>
-              <p>Optional custom tunnel-client executable.</p>
-            </div>
-          </div>
-          <label>Custom tunnel-client path
-            <input id="customTunnelClient" placeholder="Leave blank to use the bundled tunnel-client" />
-          </label>
-          <p class="soft-note">Detected: <span id="detectedTunnelClient">—</span></p>
-        </article>
-      </section>
-
-      <section id="peers" class="peer-zone">
-        <div class="peer-heading">
-          <div><div class="eyebrow">TAILSCALE · PRIVATE TEAM NETWORK</div><h2>Team peers</h2><p>Chat, screen preview, and approved remote control. Your existing ChatGPT tunnels are not shared or changed.</p></div>
-          <span id="peerNetworkState" class="status-pill">Checking Tailscale</span>
-        </div>
-        <div class="peer-grid">
-          <article class="card peer-card">
-            <h3>This computer</h3>
-            <p id="peerIdentity" class="peer-muted">Looking for your Tailnet address…</p>
-            <div class="peer-actions">
-              <button id="peerCopyInvite" class="primary-btn">Copy private invite</button>
-              <button id="peerRekey" class="outline-btn">Revoke old invite</button>
-            </div>
-            <p class="peer-note">Send this invite directly to a trusted teammate. The link contains a secret: do not post it publicly. Each PC must add the other PC's invite.</p>
-            <div class="peer-permissions">
-              <label class="toggle-line"><input type="checkbox" id="peerShareScreen" /> Share my screen with paired peers</label>
-              <div class="peer-actions"><button id="peerGrantControl" class="outline-btn">Allow control · 10 minutes</button><button id="peerRevokeControl" class="outline-btn">Stop remote control</button></div>
-              <p id="peerPermissionStatus" class="peer-note">Remote control is off. Screen sharing is off.</p>
-            </div>
-          </article>
-          <article class="card peer-card">
-            <h3>Add a trusted PC</h3>
-            <label>Computer name<input id="peerNewName" placeholder="Shahbaz PC" autocomplete="off" /></label>
-            <label>Peer invite<input id="peerInviteText" type="password" placeholder="mcppeer://100.x.x.x:44176/…" autocomplete="off" spellcheck="false" /></label>
-            <div class="peer-actions"><button id="peerAdd" class="primary-btn">Add peer</button></div>
-            <p id="peerPairStatus" class="peer-note" role="status">Both devices need Tailscale and MCP Bridge running.</p>
-          </article>
-        </div>
-        <article class="card peer-card peer-workspace">
-          <div class="peer-workspace-head"><div><h3>Peer workspace</h3><p>Secure messages and screen viewing over Tailscale</p></div>
-            <div class="peer-actions">
-              <select id="peerSelect" aria-label="Choose paired PC"><option value="">Choose a peer</option></select>
-              <button id="peerCheck" class="outline-btn">Check connection</button>
-              <button id="peerRemove" class="outline-btn">Remove</button>
-            </div>
-          </div>
-          <p id="peerRemoteStatus" class="peer-note" role="status">Add and select a peer to begin.</p>
-          <div class="peer-workspace-grid">
-            <div class="peer-chat">
-              <h3>Team chat</h3>
-              <div id="peerMessages" class="peer-messages" aria-live="polite">No messages yet.</div>
-              <div class="peer-compose"><input id="peerMessageText" maxlength="2000" placeholder="Write a message…" aria-label="Team message" /><button id="peerSend" class="primary-btn">Send</button></div>
-            </div>
-            <div class="peer-screen-pane">
-              <div class="peer-screen-head"><h3>Screen preview</h3><button id="peerScreenToggle" class="outline-btn">Start viewing</button></div>
-              <div id="peerScreenSurface" class="peer-screen-surface"><img id="peerScreenImage" alt="Live screen preview from selected peer" hidden /><span id="peerScreenHelp">Screen sharing must be enabled on the other PC.</span></div>
-              <p class="peer-note">Preview refreshes around once per second. Click the image only after the other PC approves remote control.</p>
-              <div class="peer-actions"><input id="peerRemoteType" maxlength="1500" placeholder="Type on remote PC (approved only)" aria-label="Remote text" /><button id="peerTypeButton" class="outline-btn">Type</button></div>
-              <div class="peer-actions"><input id="peerRemoteCommand" placeholder="Remote shell command (approved only)" aria-label="Remote command" /><button id="peerCommandButton" class="outline-btn">Run</button></div>
-              <pre id="peerCommandResult" class="peer-command-result" hidden></pre>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <div class="save-bar">
-        <div>
-          <strong>Close minimizes to the taskbar.</strong>
-          <span>The tray icon can reopen the app or quit it completely.</span>
-        </div>
-        <div class="save-actions">
-          <span id="message"></span>
-          <button id="save" class="primary-btn">Save settings</button>
-        </div>
-      </div>
-
-      <footer>
-        <button class="text-btn link" data-url="https://platform.openai.com/settings/organization/tunnels">OpenAI Tunnels</button>
-        <button class="text-btn link" data-url="https://platform.openai.com/settings/organization/api-keys">Runtime API Keys</button>
-      </footer>
-    </main>
-  </div>
-  <script src="renderer.js"></script>
-  <script src="peers.js"></script>
-</body>
+<div class="app-shell">
+<aside class="sidebar">
+<div class="brand">
+<img alt="" class="brand-icon" src="../../assets/icon.svg"/>
+<div>
+<strong>MCP Bridge</strong>
+<span>PRIVATE MCP WORKSPACE</span>
+</div>
+<div class="brand-subtitle">By Advertpreneur</div></div>
+<nav aria-label="MCP Bridge areas" aria-orientation="vertical" role="tablist"><div class="nav-section-label">WORKSPACE</div><button aria-controls="panel-overview" aria-label="Overview" aria-selected="true" class="nav-item active" data-target="overview" id="tab-overview" role="tab" tabindex="0" title="Workspace overview and status" type="button"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><rect height="7" rx="1.5" width="7" x="3" y="3"></rect><rect height="7" rx="1.5" width="7" x="14" y="3"></rect><rect height="7" rx="1.5" width="7" x="3" y="14"></rect><rect height="7" rx="1.5" width="7" x="14" y="14"></rect></svg><span class="nav-label">Overview</span></button><button aria-controls="panel-connections" aria-label="Connections" aria-selected="false" class="nav-item" data-target="connections" id="tab-connections" role="tab" tabindex="-1" title="Start and stop MCP tunnels" type="button"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect><path d="M10 6h3a3 3 0 0 1 3 3v5M14 11l2 3 3-2"></path></svg><span class="nav-label">Connections</span></button><button aria-controls="panel-folders" aria-label="Local folders" aria-selected="false" class="nav-item" data-target="folders" id="tab-folders" role="tab" tabindex="-1" title="Manage allowed folders and drives" type="button"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 10h18"></path></svg><span class="nav-label">Local folders</span></button><button aria-controls="panel-browser" aria-label="Browser" aria-selected="false" class="nav-item" data-target="browser" id="tab-browser" role="tab" tabindex="-1" title="Chrome DevTools integration" type="button"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="m5 5 5 5M14 13l4 6M14 9l7 0"></path></svg><span class="nav-label">Browser</span></button><button aria-controls="panel-peers" aria-label="Team peers" aria-selected="false" class="nav-item" data-target="peers" id="tab-peers" role="tab" tabindex="-1" title="Secure computer-to-computer access" type="button"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><rect height="9" rx="2" width="12" x="2" y="6"></rect><path d="M5 18h6M8 15v3"></path><rect height="9" rx="1" width="5" x="17" y="3"></rect><path d="m15 7 2-1m-1 6-2-2"></path></svg><span class="nav-label">Team peers</span></button><div class="nav-section-label">SYSTEM</div><button aria-controls="panel-activity" aria-label="Activity" aria-selected="false" class="nav-item" data-target="activity" id="tab-activity" role="tab" tabindex="-1" title="Logs and diagnostics" type="button"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg><span class="nav-label">Activity</span></button><button aria-controls="panel-settings" aria-label="Settings" aria-selected="false" class="nav-item" data-target="settings" id="tab-settings" role="tab" tabindex="-1" title="Credentials, permissions, and updates" type="button"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.9l.08.08-2.8 2.8-.08-.08a1.7 1.7 0 0 0-1.9-.34 1.7 1.7 0 0 0-1 1.55V21h-4v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.9.34l-.08.08-2.8-2.8.08-.08A1.7 1.7 0 0 0 4.68 15a1.7 1.7 0 0 0-1.55-1H3v-4h.13A1.7 1.7 0 0 0 4.68 9a1.7 1.7 0 0 0-.34-1.9l-.08-.08 2.8-2.8.08.08A1.7 1.7 0 0 0 9 4.68a1.7 1.7 0 0 0 1-1.55V3h4v.13A1.7 1.7 0 0 0 15 4.68a1.7 1.7 0 0 0 1.9-.34l.08-.08 2.8 2.8-.08.08A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21v4h-.05A1.7 1.7 0 0 0 19.4 15z"></path></svg><span class="nav-label">Settings</span><span class="nav-dirty" hidden="" id="settingsDirtyDot"></span></button></nav>
+<div class="sidebar-footer"><div class="sidebar-status">
+<span class="live-dot" id="sidebarDot"></span>
+<div>
+<strong id="sidebarStatus">Services stopped</strong>
+<span id="sidebarSub">Local + Web MCP</span>
+</div>
+</div><div class="sidebar-version" id="sidebarVersion">Bridge • Local workspace</div></div></aside>
+<main class="content">
+<header class="app-topbar">
+<div class="topbar-left">
+<span aria-hidden="true" class="topbar-symbol"></span>
+<div class="topbar-breadcrumb"><span>WORKSPACE</span><span class="breadcrumb-separator">/</span><strong id="activeModule">Overview</strong></div>
+</div>
+<div class="topbar-actions">
+<span class="live-count" id="topConnection"><span class="live-indicator"></span><span id="liveServiceStatus">Checking tunnels</span></span>
+<button class="top-save" hidden="" id="topSave" type="button"></button>
+<span class="version-chip" id="topVersion">v0.2.13</span>
+</div>
+</header>
+<div class="page-heading">
+<div>
+<div class="page-kicker" id="pageKicker">CONTROL CENTER</div>
+<h1 id="pageTitle">Workspace overview</h1>
+<p id="pageSubtitle">Your services, connected in one place.</p>
+</div>
+<div class="page-side-action" id="pageSideAction"><span class="mini-check"></span> Private, local-first</div>
+</div>
+<section aria-labelledby="tab-overview" class="tab-panel" id="panel-overview" role="tabpanel" tabindex="0"><section class="hero overview-hero" id="overview">
+<div>
+<div class="eyebrow">READY WHEN YOU ARE</div>
+<h1>Your workspace. All connected.</h1>
+<p>A clear view of every active MCP tunnel, permission and connected resource.</p>
+</div>
+<button class="ghost-btn" id="restartAll">Restart running services</button>
+</section><section class="stats-grid">
+<article class="stat-card">
+<div class="stat-icon blue"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 10h18"></path></svg></div>
+<div>
+<span class="stat-label">Local MCP</span>
+<strong id="localState">Stopped</strong>
+<small id="localMeta">No local tunnel active</small>
+</div>
+<span class="status-pill" id="localDot">Offline</span>
+</article>
+<article class="stat-card">
+<div class="stat-icon violet"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="m5 5 5 5M14 13l4 6M14 9l7 0"></path></svg></div>
+<div>
+<span class="stat-label">Web MCP</span>
+<strong id="browserState">Stopped</strong>
+<small id="browserMeta">No browser tunnel active</small>
+</div>
+<span class="status-pill" id="browserDot">Offline</span>
+</article>
+<article class="stat-card">
+<div class="stat-icon mint"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><circle cx="8" cy="15" r="4"></circle><path d="M11 12 20 3l1 4-3 1-1 3-3 1"></path></svg></div>
+<div>
+<span class="stat-label">Runtime API key</span>
+<strong id="keyState">Not configured</strong>
+<small>Stored locally with OS encryption</small>
+</div>
+<span class="status-pill" id="keyPill">Missing</span>
+</article>
+<article class="stat-card">
+<div class="stat-icon cyan"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><rect height="14" rx="3" width="18" x="3" y="5"></rect><path d="M3 13h18m-4 3h.01m-3 0h.01"></path></svg></div>
+<div>
+<span class="stat-label">Allowed roots</span>
+<strong id="rootCount">0 folders</strong>
+<small id="mountCount">Checking mounted drives…</small>
+</div>
+<span class="status-pill good">Protected</span>
+</article>
+</section>
+<div class="overview-lower">
+<article class="card overview-help">
+<div class="card-head"><div><span class="section-overline">GET STARTED</span><h2>Everything in its place</h2><p>Choose a workspace to manage that part of your setup.</p></div></div>
+<div class="quick-link-grid">
+<button class="quick-link" data-go="connections" type="button"><span class="quick-icon" data-ico="connections"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect><path d="M10 6h3a3 3 0 0 1 3 3v5M14 11l2 3 3-2"></path></svg></span><span><strong>Manage tunnels</strong><small>Start, stop and inspect connections</small></span><span class="quick-arrow" data-ico="arrow"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg></span></button>
+<button class="quick-link" data-go="folders" type="button"><span class="quick-icon" data-ico="folders"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 10h18"></path></svg></span><span><strong>Manage access</strong><small>Choose the folders ChatGPT can reach</small></span><span class="quick-arrow" data-ico="arrow"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg></span></button>
+<button class="quick-link" data-go="peers" type="button"><span class="quick-icon" data-ico="peers"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><rect height="9" rx="2" width="12" x="2" y="6"></rect><path d="M5 18h6M8 15v3"></path><rect height="9" rx="1" width="5" x="17" y="3"></rect><path d="m15 7 2-1m-1 6-2-2"></path></svg></span><span><strong>Team connections</strong><small>Private chat and screen sharing</small></span><span class="quick-arrow" data-ico="arrow"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg></span></button>
+<button class="quick-link" data-go="activity" type="button"><span class="quick-icon" data-ico="activity"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M3 12h4l3-8 4 16 3-8h4"></path></svg></span><span><strong>Check activity</strong><small>Inspect runtime logs and diagnostics</small></span><span class="quick-arrow" data-ico="arrow"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg></span></button>
+</div>
+</article>
+<article class="card trust-card">
+<div class="trust-icon" data-ico="shield"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="m12 22 7-4V6l-7-3-7 3v12z"></path><path d="m9 12 2 2 4-4"></path></svg></div>
+<span class="section-overline">SECURITY STATUS</span>
+<h2>You stay in control.</h2>
+<p>Only your approved folders and enabled services are available through the MCP Bridge.</p>
+<div class="trust-divider"></div>
+<div class="trust-item"><span class="live-indicator"></span><span>Local tunnel</span><strong id="overviewLocalStatus">Checking</strong></div>
+<div class="trust-item"><span class="live-indicator"></span><span>Web tunnel</span><strong id="overviewWebStatus">Checking</strong></div>
+<div class="trust-item"><span class="live-indicator"></span><span>Meta Manager</span><strong id="overviewMetaStatus">Checking</strong></div>
+<button class="trust-link" data-go="settings" type="button">Review permissions <span data-ico="arrow"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M5 12h14m-6-6 6 6-6 6"></path></svg></span></button>
+</article>
+</div>
+</section><section aria-labelledby="tab-connections" class="tab-panel" hidden="" id="panel-connections" role="tabpanel" tabindex="0"><section class="connections-layout" id="connections">
+<article class="card">
+<div class="card-head">
+<div>
+<h2>Your MCP services</h2>
+<p>Independently control each secure tunnel. Your saved IDs remain unchanged.</p>
+</div>
+</div>
+<div class="service-row">
+<div class="service-logo blue"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M3 10h18"></path></svg></div>
+<div class="service-copy">
+<strong>Local MCP</strong>
+<span id="localTunnelLabel">Tunnel not configured</span>
+</div>
+<button class="primary-btn" id="localToggle">Start Local</button>
+</div>
+<div class="service-row">
+<div class="service-logo violet"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle><path d="m5 5 5 5M14 13l4 6M14 9l7 0"></path></svg></div>
+<div class="service-copy">
+<strong>Web MCP</strong>
+<span id="browserTunnelLabel">Tunnel not configured</span>
+</div>
+<button class="primary-btn" id="browserToggle">Start Web</button>
+</div>
+<div class="service-row">
+<div class="service-logo mint"><svg aria-hidden="true" class="icon" fill="none" focusable="false" height="19" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewbox="0 0 24 24" width="19"><rect height="7" rx="2" width="7" x="3" y="3"></rect><rect height="7" rx="2" width="7" x="14" y="14"></rect><path d="M10 6h3a3 3 0 0 1 3 3v5M14 11l2 3 3-2"></path></svg></div>
+<div class="service-copy"><strong>Meta Manager MCP</strong><span id="metaTunnelLabel">Tunnel not configured</span></div>
+<button class="primary-btn" id="metaToggle">Start Meta</button>
+</div>
+<p class="soft-note" id="metaHelp">Open Meta Manager on this PC before starting. The tunnel connects directly to Meta Manager's localhost-only MCP at 127.0.0.1:38939. Use a separate tunnel ID; no public port is opened.</p>
+</article>
+<article class="card connection-guide">
+<span class="section-overline">HOW IT WORKS</span>
+<h2>Three independent connections.</h2>
+<p>Each service is isolated and can be managed without affecting the others.</p>
+<div class="guide-steps">
+<div class="guide-step"><span class="step-number">01</span><div><strong>Local MCP</strong><small>Controlled access to approved files and terminal operations.</small></div></div>
+<div class="guide-step"><span class="step-number">02</span><div><strong>Web MCP</strong><small>Browser operations through your existing Chrome session.</small></div></div>
+<div class="guide-step"><span class="step-number">03</span><div><strong>Meta Manager</strong><small>Dedicated connection to the local Meta Manager MCP server.</small></div></div>
+</div>
+<button class="outline-btn guide-button" data-go="settings" type="button">Configure tunnel IDs</button>
+</article></section></section><section aria-labelledby="tab-browser" class="tab-panel" hidden="" id="panel-browser" role="tabpanel" tabindex="0"><article class="card browser-main-card" id="browser">
+<div class="card-head">
+<div>
+<h2>Chrome DevTools connection</h2>
+<p>Control your existing Chrome session with the browser's native debugging interface.</p>
+</div>
+</div>
+<div class="info-stack">
+<div class="info-row"><span>Vision tools</span><strong id="visionStatus">Enabled</strong></div>
+<div class="info-row"><span>Usage statistics</span><strong id="statsStatus">Disabled</strong></div>
+<div class="info-row"><span>Tunnel client</span><strong id="clientStatus">Detected</strong></div>
+</div>
+<p class="soft-note">For automatic browser control, Chrome remote debugging must be enabled at <b>chrome://inspect/#remote-debugging</b>.</p>
+</article>
+<div class="browser-guides">
+<article class="card">
+<span class="section-overline">BROWSER SETUP</span>
+<h2>Connect your Chrome session</h2>
+<p>Allow Chrome remote debugging, then start Web MCP from the Connections tab.</p>
+<div class="browser-step"><span>1</span><div><strong>Enable Chrome debugging</strong><small>Open chrome://inspect/#remote-debugging in Chrome.</small></div></div>
+<div class="browser-step"><span>2</span><div><strong>Start the Web MCP tunnel</strong><small>The Bridge connects to your existing browser.</small></div></div>
+<div class="browser-step"><span>3</span><div><strong>Use browser tools in ChatGPT</strong><small>Access is limited to your authorized connection.</small></div></div>
+<button class="outline-btn" data-go="connections" type="button">Open connections</button>
+</article>
+<article class="card browser-privacy">
+<span class="section-overline">CONFIGURATION</span><h2>Browser permissions</h2>
+<p>Vision and usage reporting are controlled in Settings. Changes take effect after saving and restarting the affected tunnel.</p>
+<button class="text-btn" data-go="settings" type="button">Review browser settings</button>
+</article>
+</div>
+</section><section aria-labelledby="tab-folders" class="tab-panel" hidden="" id="panel-folders" role="tabpanel" tabindex="0"><section class="card" id="folders">
+<div class="card-head">
+<div>
+<h2>Local folders</h2>
+<p>Only folders listed here are available through Local MCP.</p>
+</div>
+<button class="outline-btn" id="addFolder">+ Add folder</button>
+</div>
+<div class="roots-list" id="roots"></div>
+</section><section class="card">
+<div class="card-head">
+<div>
+<h2>Mounted drives</h2>
+<p>External SSDs and mounted volumes detected by Linux.</p>
+</div>
+<button class="outline-btn" id="refreshDrives">Refresh</button>
+</div>
+<div class="drive-grid" id="mountedDrives">
+<div class="empty-state">Checking mounted drives…</div>
+</div>
+</section>
+<div class="folder-note">
+<div><strong>Changes to folder access are not automatic.</strong><span>Save your folder changes to update which folders Local MCP can access.</span></div>
+<button class="primary-btn" id="saveFolders" type="button">Save folder changes</button>
+</div>
+</section><section aria-labelledby="tab-activity" class="tab-panel" hidden="" id="panel-activity" role="tabpanel" tabindex="0"><section class="card activity-card" id="activity">
+<div class="card-head">
+<div>
+<h2>Recent activity</h2>
+<p>Live Local MCP, Web MCP and Meta Manager runtime events.</p>
+</div>
+<button class="text-btn" id="clearLogs">Clear view</button>
+</div>
+<pre id="logs"></pre>
+</section><section class="card" id="diagnostics">
+<div class="card-head">
+<div><h2>Support diagnostics</h2><p>Combine MCP Bridge and Meta Manager failures, then review them before creating a private GitHub issue.</p></div>
+</div>
+<p class="soft-note">Privacy: only allowlisted error categories, HTTP status codes, application version and OS are included. No account names, tokens, passwords, OAuth codes, tunnel IDs or raw logs. Nothing is uploaded automatically.</p>
+<div class="actions">
+<button class="outline-btn" id="previewDiagnostics">Generate report</button>
+<button class="outline-btn" disabled="" id="copyDiagnostics">Copy sanitized report</button>
+<button class="primary-btn" disabled="" id="reportDiagnostics">Open GitHub issue draft</button>
+</div>
+<pre class="diagnostic-preview" hidden="" id="diagnosticPreview"></pre>
+<p aria-live="polite" class="soft-note" id="diagnosticMessage">Generate and inspect the report before sharing. GitHub submission is always manual.</p>
+</section></section><section aria-labelledby="tab-peers" class="tab-panel" hidden="" id="panel-peers" role="tabpanel" tabindex="0"><section class="peer-zone peer-tab" id="peers">
+<div class="peer-heading">
+<div><div class="eyebrow">INVITE-ONLY ACCESS</div><h2>Pair trusted computers</h2><p>Exchange private messages, preview screens and approve temporary control when needed.</p></div>
+<span class="status-pill" id="peerNetworkState">Checking Tailscale</span>
+</div>
+<div class="peer-grid">
+<article class="card peer-card">
+<h3>This computer</h3>
+<p class="peer-muted" id="peerIdentity">Looking for your Tailnet address…</p>
+<div class="peer-actions">
+<button class="primary-btn" id="peerCopyInvite">Copy private invite</button>
+<button class="outline-btn" id="peerRekey">Revoke old invite</button>
+</div>
+<p class="peer-note">Send this invite directly to a trusted teammate. The link contains a secret: do not post it publicly. Each PC must add the other PC's invite.</p>
+<div class="peer-permissions">
+<label class="toggle-line"><input id="peerShareScreen" type="checkbox"/> Share my screen with paired peers</label>
+<div class="peer-actions"><button class="outline-btn" id="peerGrantControl">Allow control · 10 minutes</button><button class="outline-btn" id="peerRevokeControl">Stop remote control</button></div>
+<p class="peer-note" id="peerPermissionStatus">Remote control is off. Screen sharing is off.</p>
+</div>
+</article>
+<article class="card peer-card">
+<h3>Add a trusted PC</h3>
+<label>Computer name<input autocomplete="off" id="peerNewName" placeholder="Shahbaz PC"/></label>
+<label>Peer invite<input autocomplete="off" id="peerInviteText" placeholder="mcppeer://100.x.x.x:44176/…" spellcheck="false" type="password"/></label>
+<div class="peer-actions"><button class="primary-btn" id="peerAdd">Add peer</button></div>
+<p class="peer-note" id="peerPairStatus" role="status">Both devices need Tailscale and MCP Bridge running.</p>
+</article>
+</div>
+<article class="card peer-card peer-workspace">
+<div class="peer-workspace-head"><div><h3>Peer workspace</h3><p>Secure messages and screen viewing over Tailscale</p></div>
+<div class="peer-actions">
+<select aria-label="Choose paired PC" id="peerSelect"><option value="">Choose a peer</option></select>
+<button class="outline-btn" id="peerCheck">Check connection</button>
+<button class="outline-btn" id="peerRemove">Remove</button>
+</div>
+</div>
+<p class="peer-note" id="peerRemoteStatus" role="status">Add and select a peer to begin.</p>
+<div class="peer-workspace-grid">
+<div class="peer-chat">
+<h3>Team chat</h3>
+<div aria-live="polite" class="peer-messages" id="peerMessages">No messages yet.</div>
+<div class="peer-compose"><input aria-label="Team message" id="peerMessageText" maxlength="2000" placeholder="Write a message…"/><button class="primary-btn" id="peerSend">Send</button></div>
+</div>
+<div class="peer-screen-pane">
+<div class="peer-screen-head"><h3>Screen preview</h3><button class="outline-btn" id="peerScreenToggle">Start viewing</button></div>
+<div class="peer-screen-surface" id="peerScreenSurface"><img alt="Live screen preview from selected peer" hidden="" id="peerScreenImage"/><span id="peerScreenHelp">Screen sharing must be enabled on the other PC.</span></div>
+<p class="peer-note">Preview refreshes around once per second. Click the image only after the other PC approves remote control.</p>
+<div class="peer-actions"><input aria-label="Remote text" id="peerRemoteType" maxlength="1500" placeholder="Type on remote PC (approved only)"/><button class="outline-btn" id="peerTypeButton">Type</button></div>
+<div class="peer-actions"><input aria-label="Remote command" id="peerRemoteCommand" placeholder="Remote shell command (approved only)"/><button class="outline-btn" id="peerCommandButton">Run</button></div>
+<pre class="peer-command-result" hidden="" id="peerCommandResult"></pre>
+</div>
+</div>
+</article>
+</section></section><section aria-labelledby="tab-settings" class="tab-panel" hidden="" id="panel-settings" role="tabpanel" tabindex="0"><section class="settings-grid" id="settings">
+<article class="card">
+<div class="card-head">
+<div>
+<h2>Connection settings</h2>
+<p>Runtime key and OpenAI Secure MCP Tunnel IDs.</p>
+</div>
+</div>
+<label>Runtime API key
+            <input autocomplete="off" id="apiKey" placeholder="sk-proj-…" type="password"/>
+<small>Saved using your operating system's secure storage.</small>
+</label>
+<div class="field-grid">
+<label>Local tunnel ID
+              <input id="localTunnelId" placeholder="tunnel_…"/>
+</label>
+<label>Web tunnel ID
+              <input id="browserTunnelId" placeholder="tunnel_…"/>
+</label>
+<label>Meta Manager tunnel ID (optional)
+              <input autocomplete="off" id="metaTunnelId" placeholder="tunnel_…" spellcheck="false"/>
+</label>
+</div>
+<label class="toggle-line"><input id="rememberApiKey" type="checkbox"/> Remember API key securely</label>
+</article>
+<article class="card">
+<div class="card-head">
+<div>
+<h2>Permissions &amp; startup</h2>
+<p>Choose what Local MCP is allowed to do.</p>
+</div>
+</div>
+<div class="toggle-stack">
+<label class="toggle-line"><input id="enableWrite" type="checkbox"/> Create and write files</label>
+<label class="toggle-line"><input id="enableShell" type="checkbox"/> Terminal tool</label>
+<label class="toggle-line danger"><input id="fullShell" type="checkbox"/> Full shell access</label>
+<label class="toggle-line"><input id="browserVision" type="checkbox"/> Browser coordinate / vision tools</label>
+<label class="toggle-line"><input id="browserUsageStatistics" type="checkbox"/> Chrome MCP usage statistics</label>
+<label class="toggle-line"><input id="startAtLogin" type="checkbox"/> Start MCP Bridge when I sign in</label>
+<label class="toggle-line"><input id="startLocalOnLaunch" type="checkbox"/> Start Local MCP automatically</label>
+<label class="toggle-line"><input id="startBrowserOnLaunch" type="checkbox"/> Start Web MCP automatically</label>
+<label class="toggle-line"><input id="startMetaOnLaunch" type="checkbox"/> Start Meta Manager MCP automatically</label>
+</div>
+</article>
+<article class="card span-two update-card">
+<div class="card-head">
+<div>
+<h2>Updates</h2>
+<p>Keep MCP Bridge current on Linux and Windows.</p>
+</div>
+<span class="status-pill" id="updateBadge">Not checked</span>
+</div>
+<div class="update-layout">
+<div class="update-copy">
+<div class="info-row"><span>Current version</span><strong id="currentVersion">—</strong></div>
+<div class="info-row"><span>Latest release</span><strong id="latestVersion">—</strong></div>
+<div class="info-row"><span>Status</span><strong id="updateStatusText">Updates have not been checked yet.</strong></div>
+<label class="toggle-line"><input id="automaticUpdateChecks" type="checkbox"/> Check for updates automatically</label>
+</div>
+<div class="update-actions">
+<button class="outline-btn" id="checkUpdates">Check for updates</button>
+<button class="primary-btn" hidden="" id="downloadUpdate">Download update</button>
+<button class="primary-btn" hidden="" id="installUpdate">Install &amp; restart</button>
+</div>
+</div>
+<div class="update-progress-wrap" hidden="" id="updateProgressWrap">
+<div class="update-progress-track"><div class="update-progress-bar" id="updateProgressBar"></div></div>
+<span id="updateProgressLabel">0%</span>
+</div>
+<p class="soft-note">Downloads are verified with the SHA-256 checksum published with each GitHub Release before installation is allowed.</p>
+</article>
+<article class="card span-two">
+<div class="card-head">
+<div>
+<h2>Advanced</h2>
+<p>Optional custom tunnel-client executable.</p>
+</div>
+</div>
+<label>Custom tunnel-client path
+            <input id="customTunnelClient" placeholder="Leave blank to use the bundled tunnel-client"/>
+</label>
+<p class="soft-note">Detected: <span id="detectedTunnelClient">—</span></p>
+</article>
+</section><div class="save-bar settings-save">
+<div>
+<strong>Your configuration stays on this computer.</strong>
+<span>Changes to permissions and connections apply when you save.</span>
+</div>
+<div class="save-actions">
+<span id="message"></span>
+<button class="primary-btn" id="save">Save settings</button>
+</div>
+</div><footer>
+<button class="text-btn link" data-url="https://platform.openai.com/settings/organization/tunnels">OpenAI Tunnels</button>
+<button class="text-btn link" data-url="https://platform.openai.com/settings/organization/api-keys">Runtime API Keys</button>
+</footer></section></main>
+</div>
+<script src="renderer.js"></script>
+<script src="peers.js"></script>
+<script src="navigation.js"></script></body>
 </html>

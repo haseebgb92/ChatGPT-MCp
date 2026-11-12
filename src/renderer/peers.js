@@ -176,6 +176,9 @@
       p('peerCommandResult').textContent = (result.stdout || '') + '\n' + (result.stderr || '') + '\nExit: ' + result.exit_code;
     } catch (e) { fail('peerRemoteStatus', e); }
   };
+  document.addEventListener('bridge:tabchange', event => {
+    if (event.detail?.from === 'peers' && event.detail.to !== 'peers') stopViewing();
+  });
   window.bridge.onPeerUpdate(refresh);
   setInterval(async () => {
     if (selected) await renderMessages();

@@ -74,7 +74,7 @@ async function xdo(args) {
   if (cp.status !== 0) throw new Error('Desktop input failed; ensure X11 and xdotool are available.');
 }
 
-function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log = () => {}, changed = () => {} }) {
+function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log = () => {}, changed = () => {}, listenerPort = PORT }) {
   const configFile = path.join(userData, 'peer-network.json');
   const historyFile = path.join(userData, 'peer-messages.json');
   let config = { name: os.hostname(), token: randomToken(), peers: [] };
@@ -98,7 +98,7 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
       name: config.name,
       tailscaleIp: ip,
       running: Boolean(server && server.listening),
-      port: PORT,
+      port: server?.address()?.port || PORT,
       sharingScreen: screenEnabled,
       controlExpiresAt: controlExpires > Date.now() ? new Date(controlExpires).toISOString() : null,
       peers: config.peers.map(({ id, name, ip: peerIp }) => ({ id, name, ip: peerIp }))
@@ -245,9 +245,9 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
     server.requestTimeout = 15000;
     await new Promise((resolve, reject) => {
       server.once('error', reject);
-      server.listen(PORT, ip, resolve);
+      server.listen(listenerPort, ip, resolve);
     });
-    log('Private peer network active on Tailscale ' + ip + ':' + PORT);
+    log('Private peer network active on Tailscale ' + ip + ':' + server.address().port);
     changed();
     return list();
   }
@@ -256,7 +256,7 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
     list,
     async invite() {
       if (!ip) throw new Error('Tailscale is not online.');
-      const value = 'mcppeer://' + ip + ':' + PORT + '/' + config.token;
+      const value = 'mcppeer://' + ip + ':' + (server?.address()?.port || PORT) + '/' + config.token;
       clipboard.writeText(value);
       return { copied: true };
     },
