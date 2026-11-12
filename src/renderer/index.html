@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MCP Bridge</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="peers.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -22,6 +23,7 @@
         <button class="nav-item" data-target="connections"><span>↗</span>Connections</button>
         <button class="nav-item" data-target="folders"><span>▣</span>Local Folders</button>
         <button class="nav-item" data-target="browser"><span>◎</span>Browser</button>
+        <button class="nav-item" data-target="peers"><span>⇄</span>Team peers</button>
         <button class="nav-item" data-target="activity"><span>⌁</span>Activity</button>
         <button class="nav-item" data-target="settings"><span>⚙</span>Settings</button>
       </nav>
@@ -279,6 +281,61 @@
         </article>
       </section>
 
+      <section id="peers" class="peer-zone">
+        <div class="peer-heading">
+          <div><div class="eyebrow">TAILSCALE · PRIVATE TEAM NETWORK</div><h2>Team peers</h2><p>Chat, screen preview, and approved remote control. Your existing ChatGPT tunnels are not shared or changed.</p></div>
+          <span id="peerNetworkState" class="status-pill">Checking Tailscale</span>
+        </div>
+        <div class="peer-grid">
+          <article class="card peer-card">
+            <h3>This computer</h3>
+            <p id="peerIdentity" class="peer-muted">Looking for your Tailnet address…</p>
+            <div class="peer-actions">
+              <button id="peerCopyInvite" class="primary-btn">Copy private invite</button>
+              <button id="peerRekey" class="outline-btn">Revoke old invite</button>
+            </div>
+            <p class="peer-note">Send this invite directly to a trusted teammate. The link contains a secret: do not post it publicly. Each PC must add the other PC's invite.</p>
+            <div class="peer-permissions">
+              <label class="toggle-line"><input type="checkbox" id="peerShareScreen" /> Share my screen with paired peers</label>
+              <div class="peer-actions"><button id="peerGrantControl" class="outline-btn">Allow control · 10 minutes</button><button id="peerRevokeControl" class="outline-btn">Stop remote control</button></div>
+              <p id="peerPermissionStatus" class="peer-note">Remote control is off. Screen sharing is off.</p>
+            </div>
+          </article>
+          <article class="card peer-card">
+            <h3>Add a trusted PC</h3>
+            <label>Computer name<input id="peerNewName" placeholder="Shahbaz PC" autocomplete="off" /></label>
+            <label>Peer invite<input id="peerInviteText" type="password" placeholder="mcppeer://100.x.x.x:44176/…" autocomplete="off" spellcheck="false" /></label>
+            <div class="peer-actions"><button id="peerAdd" class="primary-btn">Add peer</button></div>
+            <p id="peerPairStatus" class="peer-note" role="status">Both devices need Tailscale and MCP Bridge running.</p>
+          </article>
+        </div>
+        <article class="card peer-card peer-workspace">
+          <div class="peer-workspace-head"><div><h3>Peer workspace</h3><p>Secure messages and screen viewing over Tailscale</p></div>
+            <div class="peer-actions">
+              <select id="peerSelect" aria-label="Choose paired PC"><option value="">Choose a peer</option></select>
+              <button id="peerCheck" class="outline-btn">Check connection</button>
+              <button id="peerRemove" class="outline-btn">Remove</button>
+            </div>
+          </div>
+          <p id="peerRemoteStatus" class="peer-note" role="status">Add and select a peer to begin.</p>
+          <div class="peer-workspace-grid">
+            <div class="peer-chat">
+              <h3>Team chat</h3>
+              <div id="peerMessages" class="peer-messages" aria-live="polite">No messages yet.</div>
+              <div class="peer-compose"><input id="peerMessageText" maxlength="2000" placeholder="Write a message…" aria-label="Team message" /><button id="peerSend" class="primary-btn">Send</button></div>
+            </div>
+            <div class="peer-screen-pane">
+              <div class="peer-screen-head"><h3>Screen preview</h3><button id="peerScreenToggle" class="outline-btn">Start viewing</button></div>
+              <div id="peerScreenSurface" class="peer-screen-surface"><img id="peerScreenImage" alt="Live screen preview from selected peer" hidden /><span id="peerScreenHelp">Screen sharing must be enabled on the other PC.</span></div>
+              <p class="peer-note">Preview refreshes around once per second. Click the image only after the other PC approves remote control.</p>
+              <div class="peer-actions"><input id="peerRemoteType" maxlength="1500" placeholder="Type on remote PC (approved only)" aria-label="Remote text" /><button id="peerTypeButton" class="outline-btn">Type</button></div>
+              <div class="peer-actions"><input id="peerRemoteCommand" placeholder="Remote shell command (approved only)" aria-label="Remote command" /><button id="peerCommandButton" class="outline-btn">Run</button></div>
+              <pre id="peerCommandResult" class="peer-command-result" hidden></pre>
+            </div>
+          </div>
+        </article>
+      </section>
+
       <div class="save-bar">
         <div>
           <strong>Close minimizes to the taskbar.</strong>
@@ -297,5 +354,6 @@
     </main>
   </div>
   <script src="renderer.js"></script>
+  <script src="peers.js"></script>
 </body>
 </html>

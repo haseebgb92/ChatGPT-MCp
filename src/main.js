@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, nativeImage, safeStorage, clipboard } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, dialog, shell, nativeImage, safeStorage, clipboard, desktopCapturer, screen } = require('electron');
 const { spawn, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
@@ -6,6 +6,7 @@ const path = require('node:path');
 const net = require('node:net');
 const { checkForUpdate, downloadAndVerify, installUpdate } = require('./updater');
 const { bridgeCategory, parseDiagnosticEvents, createReport } = require('./diagnostics');
+const { createPeerNetwork } = require('./peer-network');
 
 const stableUserData = path.join(app.getPath('appData'), 'chatgpt-mcp-bridge');
 app.setPath('userData', stableUserData);
@@ -26,6 +27,7 @@ app.setAppUserModelId('com.advertpreneur.mcpbridge');
 
 
 let win = null;
+let peerNetwork = null;
 let tray = null;
 let quitting = false;
 let localProcess = null;
@@ -598,6 +600,7 @@ async function startTunnelImpl(kind) {
     CONTROL_PLANE_TUNNEL_ID: tunnelId,
     ...(kind === 'meta' ? { MCP_SERVER_URL: metaEndpoint } : (mcpCommand ? { MCP_COMMAND: mcpCommand } : {})),
     LOCAL_FOLDER_MCP_CONFIG: rootsPath(),
+    BRIDGE_PEER_CONFIG: path.join(app.getPath('userData'), 'peer-network.json'),
     ENABLE_WRITE: settings.enableWrite ? 'true' : 'false',
     ENABLE_SHELL: settings.enableShell ? 'true' : 'false',
     FULL_SHELL: settings.fullShell ? 'true' : 'false',
@@ -897,6 +900,20 @@ function createTray() {
 }
 
 ipcMain.handle('state:get', getPublicState);
+ipcMain.handle('peer:list', () => peerNetwork?.list() || { running: false, peers: [] });
+ipcMain.handle('peer:invite', () => peerNetwork.invite());
+ipcMain.handle('peer:add', (_e, name, invite) => peerNetwork.add(name, invite));
+ipcMain.handle('peer:remove', (_e, id) => peerNetwork.remove(id));
+ipcMain.handle('peer:rekey', () => peerNetwork.regenerateInvite());
+ipcMain.handle('peer:status', (_e, id) => peerNetwork.status(id));
+ipcMain.handle('peer:messages', (_e, id) => peerNetwork.messages(id));
+ipcMain.handle('peer:send', (_e, id, message) => peerNetwork.send(id, message));
+ipcMain.handle('peer:screen', (_e, id) => peerNetwork.image(id));
+ipcMain.handle('peer:command', (_e, id, cmd) => peerNetwork.command(id, cmd, 12));
+ipcMain.handle('peer:input', (_e, id, data) => peerNetwork.input(id, data));
+ipcMain.handle('peer:share', (_e, value) => peerNetwork.setScreen(value));
+ipcMain.handle('peer:grant', (_e, minutes) => peerNetwork.grantControl(minutes));
+ipcMain.handle('peer:revoke', () => peerNetwork.revokeControl());
 
 ipcMain.handle('folder:choose', async () => {
   const result = await dialog.showOpenDialog(win, {
@@ -992,6 +1009,13 @@ ipcMain.handle('open:external', async (_e, url) => {
 app.whenReady().then(async () => {
   await createWindow();
   createTray();
+  peerNetwork = createPeerNetwork({
+    userData: app.getPath('userData'), clipboard, desktopCapturer, screen,
+    log: message => addLog('peers', message),
+    changed: () => win?.webContents.send('peer:update')
+  });
+  try { await peerNetwork.init(); }
+  catch (error) { addLog('peers', 'Private peer listener failed: ' + error.message); }
 
   const settings = await loadSettings();
   if (process.argv.includes('--hidden')) {
@@ -1024,6 +1048,7 @@ app.on('before-quit', event => {
       if (process.platform !== 'linux') await stopTunnel('local');
       await stopTunnel('browser');
       await stopTunnel('meta');
+      await peerNetwork?.shutdown();
     } catch (error) {
       addLog('app', `Shutdown cleanup error: ${error.message}`);
     } finally {

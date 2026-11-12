@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { loadConfig } from './config.js';
 import { resolveInside } from './security.js';
+import { installPeerTools } from './peer-tools.js';
 
 const MAX_READ_BYTES = Number(process.env.MAX_READ_BYTES || 512_000);
 const MAX_SEARCH_FILES = Number(process.env.MAX_SEARCH_FILES || 3000);
@@ -192,6 +193,7 @@ if (ENABLE_SHELL) {
     });
 }
 
+installPeerTools(server);
 return server;
 }
 
