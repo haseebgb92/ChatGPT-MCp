@@ -35,9 +35,14 @@
 <div class="topbar-actions">
 <span class="live-count" id="topConnection"><span class="live-indicator"></span><span id="liveServiceStatus">Checking tunnels</span></span>
 <button class="top-save" hidden="" id="topSave" type="button"></button>
-<span class="version-chip" id="topVersion">v0.2.13</span>
+<span class="version-chip" id="topVersion">v0.2.15</span>
 </div>
 </header>
+<div id="peerAccessBanner" class="peer-access-banner" hidden role="status" aria-live="polite">
+  <span aria-hidden="true" class="peer-access-indicator"></span>
+  <span id="peerAccessBannerText">A paired PC can control this computer.</span>
+  <button id="peerAccessRevokeTop" type="button" class="peer-access-revoke">Revoke access now</button>
+</div>
 <div class="page-heading">
 <div>
 <div class="page-kicker" id="pageKicker">CONTROL CENTER</div>
@@ -232,7 +237,7 @@
 <p aria-live="polite" class="soft-note" id="diagnosticMessage">Generate and inspect the report before sharing. GitHub submission is always manual.</p>
 </section></section><section aria-labelledby="tab-peers" class="tab-panel" hidden="" id="panel-peers" role="tabpanel" tabindex="0"><section class="peer-zone peer-tab" id="peers">
 <div class="peer-heading">
-<div><div class="eyebrow">INVITE-ONLY ACCESS</div><h2>Pair trusted computers</h2><p>Exchange private messages, preview screens and approve temporary control when needed.</p></div>
+<div><div class="eyebrow">INVITE-ONLY ACCESS</div><h2>Pair trusted computers</h2><p>Exchange messages, view screens and give one trusted computer permission to control this PC until you revoke it.</p></div>
 <span class="status-pill" id="peerNetworkState">Checking Tailscale</span>
 </div>
 <div class="peer-grid">
@@ -245,8 +250,18 @@
 </div>
 <p class="peer-note">Send this invite directly to a trusted teammate. The link contains a secret: do not post it publicly. Each PC must add the other PC's invite.</p>
 <div class="peer-permissions">
-<label class="toggle-line"><input id="peerShareScreen" type="checkbox"/> Share my screen with paired peers</label>
-<div class="peer-actions"><button class="outline-btn" id="peerGrantControl">Allow control · 10 minutes</button><button class="outline-btn" id="peerRevokeControl">Stop remote control</button></div>
+<label class="toggle-line"><input id="peerShareScreen" type="checkbox"/> Share my screen with paired peers (stays on until disabled)</label>
+<div class="peer-control-controls">
+  <label for="peerAllowControl">Allow this paired PC to control mine
+  <select id="peerAllowControl" aria-label="Computer authorized to control this PC"><option value="">Choose computer</option></select></label>
+  <label for="peerGrantDuration">Approval duration
+  <select id="peerGrantDuration" aria-label="Remote control approval duration">
+    <option value="10">10 minutes</option><option value="60">1 hour</option><option value="480">8 hours</option>
+    <option value="until-revoked">Until manually revoked (survives restart)</option>
+  </select></label>
+</div>
+<div class="peer-actions"><button class="primary-btn" id="peerGrantControl">Approve selected PC</button><button class="outline-btn stop" id="peerRevokeControl">Revoke remote control</button></div>
+<p class="peer-warning">Until revoked allows the selected PC to use your mouse, keyboard and user-level shell, even after restarting MCP Bridge. Use the prominent Revoke button or tray menu to stop access immediately.</p>
 <p class="peer-note" id="peerPermissionStatus">Remote control is off. Screen sharing is off.</p>
 </div>
 </article>
@@ -276,7 +291,7 @@
 <div class="peer-screen-pane">
 <div class="peer-screen-head"><h3>Screen preview</h3><button class="outline-btn" id="peerScreenToggle">Start viewing</button></div>
 <div class="peer-screen-surface" id="peerScreenSurface"><img alt="Live screen preview from selected peer" hidden="" id="peerScreenImage"/><span id="peerScreenHelp">Screen sharing must be enabled on the other PC.</span></div>
-<p class="peer-note">Preview refreshes around once per second. Click the image only after the other PC approves remote control.</p>
+<p class="peer-note">Live preview refreshes around once per second while this tab is open. The paired PC must approve your mouse/keyboard access.</p>
 <div class="peer-actions"><input aria-label="Remote text" id="peerRemoteType" maxlength="1500" placeholder="Type on remote PC (approved only)"/><button class="outline-btn" id="peerTypeButton">Type</button></div>
 <div class="peer-actions"><input aria-label="Remote command" id="peerRemoteCommand" placeholder="Remote shell command (approved only)"/><button class="outline-btn" id="peerCommandButton">Run</button></div>
 <pre class="peer-command-result" hidden="" id="peerCommandResult"></pre>

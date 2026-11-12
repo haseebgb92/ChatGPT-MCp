@@ -35,6 +35,9 @@ const settings={
 const state={settings,hasApiKey:true,localRunning:true,browserRunning:true,metaRunning:true,logs:['[local] Connected','[web] Ready','[meta] Connected'],platform:'linux',appVersion:'0.2.13',tunnelClientPath:'/usr/bin/tunnel-client',
  update:{status:'up-to-date',currentVersion:'0.2.13',latestVersion:'0.2.13',message:'You are up to date.'}};
 const noop=async()=>({ok:true});
+window.__peerState={name:'Haseeb PC',tailscaleIp:'100.71.95.57',port:44176,running:true,
+ peers:[{id:'trusted-test',name:'Trusted test PC',ip:'100.90.90.90'}],sharingScreen:false,
+ controlAllowed:false,controlMode:'off',controlPeerId:null,controlPeerName:null,controlExpiresAt:null};
 window.bridge={
  getState:async()=>state,
  onState:fn=>{},onLog:fn=>{},onUpdateState:fn=>{},onPeerUpdate:fn=>{},
@@ -45,9 +48,13 @@ window.bridge={
  startLocal:noop,stopLocal:noop,startBrowser:noop,stopBrowser:noop,startMeta:noop,stopMeta:noop,restartAll:noop,
  checkForUpdates:async()=>state.update,downloadUpdate:noop,installUpdate:noop,
  previewDiagnostics:async()=> 'No issues.',copyDiagnostics:noop,reportDiagnostics:noop,
- openExternal:noop,peerList:async()=>({name:'Haseeb PC',tailscaleIp:'100.71.95.57',port:44176,running:true,peers:[],sharingScreen:false}),
+ openExternal:noop,
+ peerList:async()=>window.__peerState,
  peerInvite:noop,peerAdd:noop,peerRemove:noop,peerRekey:noop,peerStatus:noop,peerMessages:async()=>[],
- peerSend:noop,peerScreen:noop,peerCommand:noop,peerInput:noop,peerShare:noop,peerGrant:noop,peerRevoke:noop
+ peerSend:noop,peerScreen:noop,peerCommand:noop,peerInput:noop,
+ peerShare:async enabled=>{window.__peerState.sharingScreen=enabled},
+ peerGrant:async (duration,id)=>{window.__actions.push('grant:'+duration);Object.assign(window.__peerState,{controlAllowed:true,controlMode:duration==='until-revoked'?'until-revoked':'timed',controlPeerId:id,controlPeerName:'Trusted test PC',controlExpiresAt:duration==='until-revoked'?null:new Date(Date.now()+Number(duration)*60000).toISOString()});},
+ peerRevoke:async()=>{window.__actions.push('revoke');Object.assign(window.__peerState,{controlAllowed:false,controlMode:'off',controlPeerId:null,controlPeerName:null,controlExpiresAt:null});}
 };
 })();
 """
@@ -143,6 +150,17 @@ async def main():
         assert saved['name']=='settings' and not saved['dirty'] and 'save' in saved['actions']
         await client.eval("document.querySelector('#tab-connections').click();")
         await client.call('Page.captureScreenshot',{'format':'png'})
+        # Persistent control must grant only the selected peer, show the global banner, and revoke across tabs.
+        await client.eval("window.confirm=()=>true; document.querySelector('#tab-peers').click(); document.querySelector('#peerGrantDuration').value='until-revoked'; document.querySelector('#peerGrantControl').click();")
+        await asyncio.sleep(.25)
+        approved=await client.eval("({mode:window.__peerState.controlMode,id:window.__peerState.controlPeerId,visible:!document.querySelector('#peerAccessBanner').hidden,txt:document.querySelector('#peerAccessBannerText').textContent})")
+        print('PERSISTENT CONTROL UI',approved)
+        assert approved['mode']=='until-revoked' and approved['id']=='trusted-test' and approved['visible'],approved
+        await client.eval("document.querySelector('#tab-overview').click(); document.querySelector('#peerAccessRevokeTop').click();")
+        await asyncio.sleep(.25)
+        revoked=await client.eval("({mode:window.__peerState.controlMode,hidden:document.querySelector('#peerAccessBanner').hidden,actions:window.__actions})")
+        print('REVOKE FROM GLOBAL BANNER',revoked)
+        assert revoked['mode']=='off' and revoked['hidden'] and 'revoke' in revoked['actions'],revoked
         print('CDP runtime exceptions:',client.errors)
         assert not client.errors,client.errors
         print('ALL VIEWPORT + TAB TESTS PASSED')

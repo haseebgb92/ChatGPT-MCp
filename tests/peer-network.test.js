@@ -48,12 +48,50 @@ test('private config saved with restricted permissions; screen and control off b
       });
       assert.equal(unpaired.status, 403);
     }
-    assert.throws(() => net.grantControl(100));
     await net.add('Test PC', 'mcppeer://100.90.90.90:44176/' + 'b'.repeat(64));
     assert.equal(net.list().peers.length, 1);
     assert.equal(JSON.stringify(net.list()).includes('bbbb'), false);
-    await net.remove(net.list().peers[0].id);
-    assert.equal(net.list().peers.length, 0);
+    const peerId = net.list().peers[0].id;
+    await assert.rejects(net.grantControl(1000, peerId), /between 1 and 720/);
+    await assert.rejects(net.grantControl('until-revoked', 'unknown-id'), /Peer not found/);
+    await net.grantControl(10, peerId);
+    assert.equal(net.list().controlMode, 'timed');
+    assert.ok(net.list().controlExpiresAt);
+    await net.revokeControl();
+    assert.equal(net.list().controlAllowed, false);
+    await net.grantControl('until-revoked', peerId);
+    assert.equal(net.list().controlMode, 'until-revoked');
+    assert.equal(net.list().controlAllowed, true);
+    assert.equal(net.list().controlPeerName, 'Test PC');
+    assert.equal(net.list().controlExpiresAt, null);
+    let disk = JSON.parse(await fs.readFile(configFile, 'utf8'));
+    assert.equal(disk.persistentControlPeerId, peerId);
+    await net.setScreen(true);
+    assert.equal(net.list().sharingScreen, true);
+    await net.shutdown();
+    // Persistent control and screen state survive a real app restart.
+    const again = createPeerNetwork({
+      userData: dir, listenerPort: 0, clipboard: { writeText: () => {} },
+      desktopCapturer: { getSources: async () => [] },
+      screen: { getPrimaryDisplay: () => ({ size: { width: 1920, height: 1080 }, bounds: { x: 0, y: 0 } }) }
+    });
+    try {
+      await again.init();
+      assert.equal(again.list().controlAllowed, true);
+      assert.equal(again.list().controlMode, 'until-revoked');
+      assert.equal(again.list().sharingScreen, true);
+      await again.revokeControl();
+      await again.setScreen(false);
+      disk = JSON.parse(await fs.readFile(configFile, 'utf8'));
+      assert.equal(Object.hasOwn(disk, 'persistentControlPeerId'), false);
+      assert.equal(disk.sharingScreen, false);
+      await again.grantControl('until-revoked', peerId);
+      await again.remove(peerId);
+      assert.equal(again.list().controlAllowed, false);
+      assert.equal(again.list().peers.length, 0);
+    } finally {
+      await again.shutdown();
+    }
   } finally {
     await net.shutdown();
     await fs.rm(dir, { recursive: true, force: true });

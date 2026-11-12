@@ -834,6 +834,13 @@ function refreshTrayMenu() {
     { label: metaOn ? 'Stop Meta Manager MCP' : 'Start Meta Manager MCP', click: () => metaOn ? stopTunnel('meta') : startTunnel('meta').catch(e => addLog('meta', e.message)) },
     { label: 'Restart running services', enabled: localOn || webOn || metaOn, click: () => restartAll().catch(e => addLog('app', e.message)) },
     { type: 'separator' },
+    { label: (peerNetwork?.list().controlAllowed ? 'REMOTE CONTROL ACTIVE · Revoke now' : 'Remote control: Off'),
+      enabled: Boolean(peerNetwork?.list().controlAllowed),
+      click: () => peerNetwork?.revokeControl().catch(e => addLog('peers', e.message)) },
+    { label: peerNetwork?.list().sharingScreen ? 'SCREEN SHARING ACTIVE · Stop now' : 'Screen sharing: Off',
+      enabled: Boolean(peerNetwork?.list().sharingScreen),
+      click: () => peerNetwork?.setScreen(false).catch(e => addLog('peers', e.message)) },
+    { type: 'separator' },
     {
       label: updateState.available
         ? `Update to ${updateState.latestVersion}`
@@ -913,7 +920,7 @@ ipcMain.handle('peer:screen', (_e, id) => peerNetwork.image(id));
 ipcMain.handle('peer:command', (_e, id, cmd) => peerNetwork.command(id, cmd, 12));
 ipcMain.handle('peer:input', (_e, id, data) => peerNetwork.input(id, data));
 ipcMain.handle('peer:share', (_e, value) => peerNetwork.setScreen(value));
-ipcMain.handle('peer:grant', (_e, minutes) => peerNetwork.grantControl(minutes));
+ipcMain.handle('peer:grant', (_e, duration, peerId) => peerNetwork.grantControl(duration, peerId));
 ipcMain.handle('peer:revoke', () => peerNetwork.revokeControl());
 
 ipcMain.handle('folder:choose', async () => {
@@ -1013,7 +1020,7 @@ app.whenReady().then(async () => {
   peerNetwork = createPeerNetwork({
     userData: app.getPath('userData'), clipboard, desktopCapturer, screen,
     log: message => addLog('peers', message),
-    changed: () => win?.webContents.send('peer:update')
+    changed: () => { win?.webContents.send('peer:update'); refreshTrayMenu(); }
   });
   try { await peerNetwork.init(); }
   catch (error) { addLog('peers', 'Private peer listener failed: ' + error.message); }

@@ -5,6 +5,7 @@
   let selected = '';
   let viewing = false;
   let frameTimer = null;
+  let frameBusy = false;
   let remoteDisplay = { width: 0, height: 0 };
   const note = (id, text) => { p(id).textContent = text; };
   const fail = (id, error) => note(id, error && error.message ? error.message : String(error));
@@ -14,7 +15,7 @@
   };
   const stopViewing = () => {
     viewing = false;
-    clearInterval(frameTimer);
+    clearTimeout(frameTimer);
     frameTimer = null;
     p('peerScreenToggle').textContent = 'Start viewing';
     p('peerScreenImage').hidden = true;
@@ -51,9 +52,25 @@
       p('peerNetworkState').classList.toggle('good', Boolean(data.running));
       p('peerCopyInvite').disabled = !data.running;
       p('peerShareScreen').checked = Boolean(data.sharingScreen);
-      const active = data.controlExpiresAt && Date.parse(data.controlExpiresAt) > Date.now();
+      const active = Boolean(data.controlAllowed);
+      const permanent = active && data.controlMode === 'until-revoked';
+      const who = data.controlPeerName || 'paired PC';
+      const permissionText = !active ? 'OFF' : permanent
+        ? 'ON for ' + who + ' · until manually revoked (persists after restart)'
+        : 'ON for ' + who + ' · until ' + new Date(data.controlExpiresAt).toLocaleTimeString();
       note('peerPermissionStatus', 'Screen sharing: ' + (data.sharingScreen ? 'ON' : 'OFF') +
-        ' · Remote control: ' + (active ? 'allowed until ' + new Date(data.controlExpiresAt).toLocaleTimeString() : 'OFF'));
+        ' · Remote control: ' + permissionText);
+      const banner = p('peerAccessBanner');
+      banner.hidden = !active;
+      banner.classList.toggle('persistent', permanent);
+      note('peerAccessBannerText', active ? 'Remote control active for ' + who +
+        (permanent ? ' · Until revoked' : ' · Until ' + new Date(data.controlExpiresAt).toLocaleTimeString()) : '');
+      const allowed = p('peerAllowControl');
+      const previous = allowed.value;
+      allowed.replaceChildren(new Option('Choose computer', ''));
+      peers.forEach(peer => allowed.add(new Option(peer.name + ' (' + peer.ip + ')', peer.id)));
+      allowed.value = peers.some(peer => peer.id === previous) ? previous
+        : (data.controlPeerId || (peers.length === 1 ? peers[0].id : ''));
       const select = p('peerSelect');
       select.replaceChildren(new Option('Choose a peer', ''));
       peers.forEach(peer => select.add(new Option(peer.name + ' (' + peer.ip + ')', peer.id)));
@@ -68,12 +85,13 @@
       remoteDisplay = data.screenSize || { width: 0, height: 0 };
       note('peerRemoteStatus', data.name + ' · Connected' +
         ' · Screen: ' + (data.sharingScreen ? 'shared' : 'off') +
-        ' · Control: ' + (data.controlExpiresAt ? 'approved' : 'disabled'));
+        ' · Control: ' + (data.controlAllowed ? (data.controlMode === 'until-revoked' ? 'approved until revoked' : 'approved temporarily') : 'disabled'));
       return data;
     } catch (e) { fail('peerRemoteStatus', e); return null; }
   };
   const drawFrame = async () => {
-    if (!viewing || !selected) return;
+    if (!viewing || !selected || frameBusy) return;
+    frameBusy = true;
     try {
       const frame = await window.bridge.peerScreen(selected);
       if (!viewing) return;
@@ -83,6 +101,9 @@
     } catch (e) {
       stopViewing();
       fail('peerScreenHelp', e);
+    } finally {
+      frameBusy = false;
+      if (viewing) frameTimer = setTimeout(drawFrame, 700);
     }
   };
   p('peerCopyInvite').onclick = async () => {
@@ -122,14 +143,25 @@
     catch (e) { fail('peerPermissionStatus', e); }
   };
   p('peerGrantControl').onclick = async () => {
-    if (!confirm('Allow paired peers to use your keyboard, mouse and user-level shell for the next 10 minutes?')) return;
-    try { await window.bridge.peerGrant(10); await refresh(); }
+    const peerId = p('peerAllowControl').value;
+    const durationValue = p('peerGrantDuration').value;
+    const peer = peers.find(x => x.id === peerId);
+    if (!peer) { note('peerPermissionStatus', 'Select exactly which paired PC can control this computer.'); return; }
+    const permanent = durationValue === 'until-revoked';
+    const duration = permanent ? durationValue : Number(durationValue);
+    const prompt = permanent
+      ? 'Allow ' + peer.name + ' to control this PC until you revoke access? This persists across MCP Bridge restarts, including user-level shell commands and mouse/keyboard input. You can stop it any time from the tray or red banner.'
+      : 'Allow ' + peer.name + ' to use mouse, keyboard and user-level shell for ' +
+        (duration >= 60 ? duration / 60 + ' hour(s)' : duration + ' minutes') + '?';
+    if (!confirm(prompt)) return;
+    try { await window.bridge.peerGrant(duration, peerId); await refresh(); }
     catch (e) { fail('peerPermissionStatus', e); }
   };
   p('peerRevokeControl').onclick = async () => {
     try { await window.bridge.peerRevoke(); await refresh(); }
     catch (e) { fail('peerPermissionStatus', e); }
   };
+  p('peerAccessRevokeTop').onclick = () => p('peerRevokeControl').click();
   p('peerSend').onclick = async () => {
     try {
       const text = p('peerMessageText').value.trim();
@@ -148,7 +180,6 @@
     viewing = true;
     p('peerScreenToggle').textContent = 'Stop viewing';
     await drawFrame();
-    if (viewing) frameTimer = setInterval(drawFrame, 1250);
   };
   p('peerScreenImage').onclick = async e => {
     if (!remoteDisplay.width || !remoteDisplay.height) return;
@@ -183,5 +214,7 @@
   setInterval(async () => {
     if (selected) await renderMessages();
   }, 4000);
+  // Keep the local owner's permission banner accurate even after a timed grant expires.
+  setInterval(() => { if (!document.hidden) refresh().catch(() => {}); }, 30000);
   refresh();
 })();

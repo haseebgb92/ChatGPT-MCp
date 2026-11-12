@@ -68,12 +68,12 @@ export function installPeerTools(server) {
       return { content: [{ type: 'image', data: jpeg.toString('base64'), mimeType: 'image/jpeg' }] };
     } catch (e) { return fail(e); }
   });
-  server.tool('peer_run_command', 'Execute a command on a paired PC only after its user grants a temporary remote-control session. Commands run with that PC user privileges, not sandboxed; use carefully.', {
+  server.tool('peer_run_command', 'Execute a command on a paired PC only only after its user explicitly approves a peer-scoped control session. Commands run with that PC user privileges, not sandboxed; use carefully.', {
     peer: z.string().min(1), command: z.string().min(1).max(4000), timeout_seconds: z.number().int().min(1).max(20).default(10)
   }, async ({ peer, command, timeout_seconds }) => {
     try { return ok(await ask(await target(peer), '/v1/command', 'POST', { command, timeout: timeout_seconds })); } catch (e) { return fail(e); }
   });
-  server.tool('peer_input', 'Send a mouse/keyboard action to a paired PC (Linux/X11) during an approved remote-control session.', {
+  server.tool('peer_input', 'Send a mouse/keyboard action to a paired PC (Linux/X11) during an explicitly approved remote-control session.', {
     peer: z.string().min(1),
     type: z.enum(['click', 'move', 'key', 'type']),
     x: z.number().optional(), y: z.number().optional(),

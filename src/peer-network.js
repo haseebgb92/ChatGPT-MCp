@@ -83,7 +83,31 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
   let ip = '';
   let screenEnabled = false;
   let controlExpires = 0;
+  let controlMode = 'off';
+  let controlPeerId = '';
   let lastCapture = 0;
+
+  function approvedPeer(peer) {
+    return Boolean(peer && controlPeerId === peer.id &&
+      (controlMode === 'until-revoked' || (controlMode === 'timed' && controlExpires > Date.now())));
+  }
+  function controlInfo() {
+    const owner = config.peers.find(peer => peer.id === controlPeerId);
+    const active = Boolean(owner && approvedPeer(owner));
+    return {
+      controlAllowed: active,
+      controlMode: active ? controlMode : 'off',
+      controlPeerId: active ? controlPeerId : null,
+      controlPeerName: active ? owner.name : null,
+      controlExpiresAt: active && controlMode === 'timed' ? new Date(controlExpires).toISOString() : null
+    };
+  }
+  function revokeState() {
+    controlMode = 'off';
+    controlPeerId = '';
+    controlExpires = 0;
+    delete config.persistentControlPeerId;
+  }
 
   async function save() {
     await fs.mkdir(userData, { recursive: true, mode: 0o700 });
@@ -100,7 +124,7 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
       running: Boolean(server && server.listening),
       port: server?.address()?.port || PORT,
       sharingScreen: screenEnabled,
-      controlExpiresAt: controlExpires > Date.now() ? new Date(controlExpires).toISOString() : null,
+      ...controlInfo(),
       peers: config.peers.map(({ id, name, ip: peerIp }) => ({ id, name, ip: peerIp }))
     };
   }
@@ -141,8 +165,8 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
     if (!sources.length || sources[0].thumbnail.isEmpty()) throw new Error('Unable to capture screen.');
     return sources[0].thumbnail.toJPEG(66);
   }
-  async function handleInput(body) {
-    if (controlExpires <= Date.now()) throw new Error('Remote control has not been approved on this PC.');
+  async function handleInput(body, sendingPeer) {
+    if (!approvedPeer(sendingPeer)) throw new Error('Remote control has not been approved for this peer on this PC.');
     const kind = String(body.type || '');
     if (process.platform === 'win32') {
       const script = path.join(__dirname, 'windows-input.ps1');
@@ -191,9 +215,12 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
     try {
       if (key === 'GET /v1/status') {
         const display = screen.getPrimaryDisplay();
+        const control = controlInfo();
         return reply(res, 200, { name: config.name, tailscaleIp: ip, sharingScreen: screenEnabled,
           screenSize: { width: display.size.width, height: display.size.height },
-          controlExpiresAt: controlExpires > Date.now() ? new Date(controlExpires).toISOString() : null });
+          controlAllowed: approvedPeer(sendingPeer),
+          controlMode: approvedPeer(sendingPeer) ? control.controlMode : 'off',
+          controlExpiresAt: approvedPeer(sendingPeer) ? control.controlExpiresAt : null });
       }
       if (key === 'GET /v1/messages') return reply(res, 200, { messages: messages.filter(m => m.peerId === sendingPeer.id).slice(-100) });
       if (key === 'POST /v1/messages') {
@@ -209,7 +236,7 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
         return;
       }
       if (key === 'POST /v1/command') {
-        if (controlExpires <= Date.now()) return reply(res, 403, { error: 'Remote control is disabled; local approval required.' });
+        if (!approvedPeer(sendingPeer)) return reply(res, 403, { error: 'Remote control is disabled for this peer; local approval required.' });
         const body = await jsonBody(req);
         const command = String(body.command || '');
         if (!command || command.length > 4000) throw new Error('Invalid command length.');
@@ -217,7 +244,7 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
         return reply(res, 200, await runLimited(command, Math.min(20, Math.max(1, Number(body.timeout) || 10))));
       }
       if (key === 'POST /v1/input') {
-        const result = await handleInput(await jsonBody(req));
+        const result = await handleInput(await jsonBody(req), sendingPeer);
         return reply(res, 200, result);
       }
       return reply(res, 404, { error: 'Not found.' });
@@ -232,6 +259,15 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
       if (typeof saved.token === 'string' && /^[a-f0-9]{64}$/.test(saved.token)) config.token = saved.token;
       if (typeof saved.name === 'string') config.name = saved.name.slice(0, 64);
       if (Array.isArray(saved.peers)) config.peers = saved.peers.filter(p => validTailIp(p.ip) && /^[a-f0-9]{64}$/.test(p.token));
+      // Only an explicitly approved 'until revoked' session survives an application restart.
+      // Timed grants always expire when the bridge exits.
+      if (saved.sharingScreen === true) screenEnabled = true;
+      if (typeof saved.persistentControlPeerId === 'string' && config.peers.some(p => p.id === saved.persistentControlPeerId)) {
+        controlMode = 'until-revoked';
+        controlPeerId = saved.persistentControlPeerId;
+      } else if (saved.persistentControlPeerId) {
+        delete config.persistentControlPeerId;
+      }
     } catch {}
     try { const saved = JSON.parse(await fs.readFile(historyFile, 'utf8')); messages = Array.isArray(saved) ? saved.slice(-MAX_MESSAGES) : []; } catch {}
     await save();
@@ -248,6 +284,8 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
       server.listen(listenerPort, ip, resolve);
     });
     log('Private peer network active on Tailscale ' + ip + ':' + server.address().port);
+    if (controlMode === 'until-revoked') log('Persistent peer control active until locally revoked.');
+    if (screenEnabled) log('Persistent peer screen sharing active until locally disabled.');
     changed();
     return list();
   }
@@ -264,14 +302,24 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
       const p = parseInvite(invite);
       if (p.ip === ip) throw new Error('Cannot add this computer as its own peer.');
       const peer = { id: crypto.randomUUID(), name: String(name || 'Team PC').trim().slice(0, 64), ...p };
+      // Replacing a peer's invitation never transfers an old control grant to the new identity.
+      if (config.peers.some(x => x.ip === p.ip && x.id === controlPeerId)) revokeState();
       config.peers = config.peers.filter(x => x.ip !== p.ip);
       config.peers.push(peer);
       await save();
       changed();
       return { id: peer.id, name: peer.name, ip: peer.ip };
     },
-    async remove(id) { config.peers = config.peers.filter(p => p.id !== id); await save(); changed(); return list(); },
-    async regenerateInvite() { config.token = randomToken(); await save(); changed(); return { regenerated: true }; },
+    async remove(id) {
+      if (controlPeerId === id) revokeState();
+      config.peers = config.peers.filter(p => p.id !== id);
+      await save(); changed(); return list();
+    },
+    async regenerateInvite() {
+      revokeState();
+      config.token = randomToken();
+      await save(); changed(); return { regenerated: true };
+    },
     async status(id) { return await clientRequest(find(id), '/v1/status'); },
     async send(id, text) {
       text = String(text || '').trim();
@@ -287,17 +335,46 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
     async image(id) { return await clientRequest(find(id), '/v1/screen', 'GET', undefined, true); },
     async command(id, command, timeout) { return await clientRequest(find(id), '/v1/command', 'POST', { command, timeout }); },
     async input(id, data) { return await clientRequest(find(id), '/v1/input', 'POST', data); },
-    setScreen(value) { screenEnabled = Boolean(value); changed(); return list(); },
-    grantControl(minutes = 10) {
-      const time = Number(minutes);
-      if (!Number.isFinite(time) || time < 1 || time > 15) throw new Error('Control grant must be between 1–15 minutes.');
-      controlExpires = Date.now() + time * 60000;
+    async setScreen(value) {
+      screenEnabled = Boolean(value);
+      config.sharingScreen = screenEnabled;
+      await save();
+      log('Local owner ' + (screenEnabled ? 'enabled' : 'disabled') + ' persistent peer screen sharing.');
       changed();
       return list();
     },
-    revokeControl() { controlExpires = 0; changed(); return list(); },
+    async grantControl(duration = 10, peerId) {
+      const peer = find(peerId);
+      if (duration === 'until-revoked') {
+        controlMode = 'until-revoked';
+        controlPeerId = peer.id;
+        controlExpires = 0;
+        config.persistentControlPeerId = peer.id;
+      } else {
+        const minutes = Number(duration);
+        if (!Number.isInteger(minutes) || minutes < 1 || minutes > 720) {
+          throw new Error('Timed control must be between 1 and 720 minutes.');
+        }
+        controlMode = 'timed';
+        controlPeerId = peer.id;
+        controlExpires = Date.now() + minutes * 60000;
+        delete config.persistentControlPeerId;
+      }
+      await save();
+      log('Local owner approved control for paired PC ' + peer.name + ': ' +
+        (controlMode === 'until-revoked' ? 'until manually revoked' : 'until ' + new Date(controlExpires).toISOString()));
+      changed();
+      return list();
+    },
+    async revokeControl() {
+      revokeState();
+      await save();
+      log('Local owner revoked all peer control.');
+      changed();
+      return list();
+    },
     async shutdown() {
-      screenEnabled = false; controlExpires = 0;
+      screenEnabled = false; revokeState();
       if (server) await new Promise(resolve => server.close(resolve));
       server = null;
     }

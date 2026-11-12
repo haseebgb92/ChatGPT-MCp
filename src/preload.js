@@ -14,7 +14,7 @@ contextBridge.exposeInMainWorld('bridge', {
   peerCommand: (id, cmd) => ipcRenderer.invoke('peer:command', id, cmd),
   peerInput: (id, data) => ipcRenderer.invoke('peer:input', id, data),
   peerShare: yes => ipcRenderer.invoke('peer:share', yes),
-  peerGrant: minutes => ipcRenderer.invoke('peer:grant', minutes),
+  peerGrant: (duration, peerId) => ipcRenderer.invoke('peer:grant', duration, peerId),
   peerRevoke: () => ipcRenderer.invoke('peer:revoke'),
   onPeerUpdate: callback => ipcRenderer.on('peer:update', () => callback()),
   saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
