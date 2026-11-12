@@ -9,3 +9,6 @@ Thumbs.db
 .env
 .env.*
 bundled/meta-manager-proxy-server.js.tmp
+/vendor/
+/__pycache__/
+/activate-v0.2.12.py
