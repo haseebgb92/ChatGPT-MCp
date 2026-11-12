@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('bridge', {
   peerStatus: id => ipcRenderer.invoke('peer:status', id),
   peerMessages: id => ipcRenderer.invoke('peer:messages', id),
   peerSend: (id, text) => ipcRenderer.invoke('peer:send', id, text),
-  peerScreen: id => ipcRenderer.invoke('peer:screen', id),
+  peerScreen: (id, large = false) => ipcRenderer.invoke('peer:screen', id, large),
   peerCommand: (id, cmd) => ipcRenderer.invoke('peer:command', id, cmd),
   peerInput: (id, data) => ipcRenderer.invoke('peer:input', id, data),
   peerShare: yes => ipcRenderer.invoke('peer:share', yes),

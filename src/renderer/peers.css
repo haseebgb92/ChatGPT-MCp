@@ -12,3 +12,21 @@
 .peer-access-revoke:hover{background:#8f3029}
 @media(max-width:760px){.peer-control-controls{grid-template-columns:1fr}}
 @media(max-width:560px){.peer-access-banner{align-items:flex-start;flex-wrap:wrap}.peer-access-revoke{margin-left:18px}}
+
+/* Large remote preview: app-owned modal, no additional browser window or stream. */
+.peer-screen-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.peer-workspace-grid{grid-template-columns:minmax(260px,.7fr) minmax(360px,1.3fr)}
+.peer-screen-backdrop{position:fixed;inset:0;z-index:120;background:rgba(8,17,34,.78);backdrop-filter:blur(5px)}
+.peer-screen-backdrop[hidden]{display:none}
+body.peer-preview-open{overflow:hidden}
+.peer-screen-pane.expanded{position:fixed;inset:12px;z-index:121;display:flex;flex-direction:column;min-width:0;min-height:0;width:auto;height:auto;max-height:calc(100dvh - 24px);overflow:auto;margin:0;padding:16px 18px;border:1px solid #344563;border-radius:16px;background:#101c2e;box-shadow:0 24px 75px rgba(0,0,0,.56);color:#dbe7fa}
+.peer-screen-pane.expanded .peer-screen-head{flex:0 0 auto}
+.peer-screen-pane.expanded h3{color:#e9f2ff;font-size:15px}
+.peer-screen-pane.expanded .peer-screen-surface{flex:1 1 auto;aspect-ratio:auto;min-height:180px;width:100%;margin:12px 0 0;border-radius:10px;background:#070e1c}
+.peer-screen-pane.expanded .peer-screen-surface img{width:100%;height:100%;object-fit:contain}
+.peer-screen-pane.expanded .peer-note{flex:0 0 auto;color:#a4b5cf;margin-top:9px}
+.peer-screen-pane.expanded .peer-actions{flex:0 0 auto}
+.peer-screen-pane.expanded .peer-command-result{flex:0 0 auto;max-height:72px}
+.peer-screen-pane.expanded #peerScreenExpand{background:#ecf2ff;color:#1c3b83;border-color:#c6d4ed}
+@media(max-width:1100px){.peer-workspace-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.peer-screen-pane.expanded{inset:5px;max-height:calc(100dvh - 10px);padding:10px;border-radius:10px}.peer-screen-pane.expanded .peer-screen-surface{min-height:120px}.peer-screen-pane.expanded .peer-actions{flex-wrap:wrap}}

@@ -6,6 +6,14 @@
   let viewing = false;
   let frameTimer = null;
   let frameBusy = false;
+  let expanded = false;
+  let previewPlaceholder = null;
+  let previousFocus = null;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'peer-screen-backdrop';
+  backdrop.hidden = true;
+  backdrop.setAttribute('aria-hidden', 'true');
+  document.body.append(backdrop);
   let remoteDisplay = { width: 0, height: 0 };
   const note = (id, text) => { p(id).textContent = text; };
   const fail = (id, error) => note(id, error && error.message ? error.message : String(error));
@@ -13,8 +21,47 @@
     if (!selected) throw new Error('Choose a paired computer first.');
     return selected;
   };
+  const collapsePreview = () => {
+    if (!expanded) return;
+    const pane = p('peerScreenPane');
+    expanded = false;
+    pane.classList.remove('expanded');
+    pane.removeAttribute('role');
+    pane.removeAttribute('aria-modal');
+    pane.removeAttribute('aria-labelledby');
+    document.body.classList.remove('peer-preview-open');
+    backdrop.hidden = true;
+    if (previewPlaceholder?.parentNode) previewPlaceholder.replaceWith(pane);
+    previewPlaceholder = null;
+    p('peerScreenExpand').textContent = 'Expand preview';
+    p('peerScreenExpand').setAttribute('aria-expanded', 'false');
+    p('peerScreenExpand').setAttribute('aria-label', 'Expand remote screen preview');
+    if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    previousFocus = null;
+  };
+  const expandPreview = () => {
+    if (expanded) { collapsePreview(); return; }
+    if (!selected) { note('peerRemoteStatus', 'Select a paired PC before expanding its preview.'); return; }
+    const pane = p('peerScreenPane');
+    previewPlaceholder = document.createComment('Screen preview returns here after close');
+    pane.parentNode.replaceChild(previewPlaceholder, pane);
+    previousFocus = document.activeElement;
+    document.body.append(pane);
+    pane.classList.add('expanded');
+    pane.setAttribute('role', 'dialog');
+    pane.setAttribute('aria-modal', 'true');
+    pane.setAttribute('aria-labelledby', 'peerScreenTitle');
+    document.body.classList.add('peer-preview-open');
+    backdrop.hidden = false;
+    expanded = true;
+    p('peerScreenExpand').textContent = 'Restore view';
+    p('peerScreenExpand').setAttribute('aria-expanded', 'true');
+    p('peerScreenExpand').setAttribute('aria-label', 'Restore compact remote screen preview');
+    p('peerScreenExpand').focus({ preventScroll: true });
+  };
   const stopViewing = () => {
     viewing = false;
+    collapsePreview();
     clearTimeout(frameTimer);
     frameTimer = null;
     p('peerScreenToggle').textContent = 'Start viewing';
@@ -83,6 +130,7 @@
     try {
       const data = await window.bridge.peerStatus(withPeer());
       remoteDisplay = data.screenSize || { width: 0, height: 0 };
+      note('peerScreenTitle', 'Screen preview · ' + (data.name || 'Paired PC'));
       note('peerRemoteStatus', data.name + ' · Connected' +
         ' · Screen: ' + (data.sharingScreen ? 'shared' : 'off') +
         ' · Control: ' + (data.controlAllowed ? (data.controlMode === 'until-revoked' ? 'approved until revoked' : 'approved temporarily') : 'disabled'));
@@ -93,7 +141,7 @@
     if (!viewing || !selected || frameBusy) return;
     frameBusy = true;
     try {
-      const frame = await window.bridge.peerScreen(selected);
+      const frame = await window.bridge.peerScreen(selected, expanded);
       if (!viewing) return;
       p('peerScreenImage').src = frame;
       p('peerScreenImage').hidden = false;
@@ -173,6 +221,28 @@
   };
   p('peerMessageText').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); p('peerSend').click(); }
+  });
+  p('peerScreenExpand').onclick = async () => {
+    if (expanded) { collapsePreview(); return; }
+    if (!selected) { note('peerRemoteStatus', 'Select a paired PC before expanding its preview.'); return; }
+    if (!viewing) {
+      if (!await check()) return;
+      viewing = true;
+      p('peerScreenToggle').textContent = 'Stop viewing';
+    }
+    expandPreview();
+    if (!frameBusy) await drawFrame();
+  };
+  backdrop.onclick = collapsePreview;
+  document.addEventListener('keydown', event => {
+    if (!expanded) return;
+    if (event.key === 'Escape') { event.preventDefault(); collapsePreview(); return; }
+    if (event.key !== 'Tab') return;
+    const items = [...p('peerScreenPane').querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')];
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   });
   p('peerScreenToggle').onclick = async () => {
     if (viewing) { stopViewing(); return; }

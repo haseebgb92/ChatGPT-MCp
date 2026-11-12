@@ -35,7 +35,7 @@
 <div class="topbar-actions">
 <span class="live-count" id="topConnection"><span class="live-indicator"></span><span id="liveServiceStatus">Checking tunnels</span></span>
 <button class="top-save" hidden="" id="topSave" type="button"></button>
-<span class="version-chip" id="topVersion">v0.2.15</span>
+<span class="version-chip" id="topVersion">v0.2.16</span>
 </div>
 </header>
 <div id="peerAccessBanner" class="peer-access-banner" hidden role="status" aria-live="polite">
@@ -288,10 +288,10 @@
 <div aria-live="polite" class="peer-messages" id="peerMessages">No messages yet.</div>
 <div class="peer-compose"><input aria-label="Team message" id="peerMessageText" maxlength="2000" placeholder="Write a message…"/><button class="primary-btn" id="peerSend">Send</button></div>
 </div>
-<div class="peer-screen-pane">
-<div class="peer-screen-head"><h3>Screen preview</h3><button class="outline-btn" id="peerScreenToggle">Start viewing</button></div>
+<div class="peer-screen-pane" id="peerScreenPane">
+<div class="peer-screen-head"><h3 id="peerScreenTitle">Screen preview</h3><div class="peer-screen-actions"><button class="outline-btn" id="peerScreenToggle" type="button">Start viewing</button><button class="outline-btn" id="peerScreenExpand" type="button" aria-expanded="false" aria-label="Expand remote screen preview">Expand preview</button></div></div>
 <div class="peer-screen-surface" id="peerScreenSurface"><img alt="Live screen preview from selected peer" hidden="" id="peerScreenImage"/><span id="peerScreenHelp">Screen sharing must be enabled on the other PC.</span></div>
-<p class="peer-note">Live preview refreshes around once per second while this tab is open. The paired PC must approve your mouse/keyboard access.</p>
+<p class="peer-note">Preview refreshes around once per second. Use Expand preview for a larger, clearer view; press Esc to return. Click to control only with the host’s approval.</p>
 <div class="peer-actions"><input aria-label="Remote text" id="peerRemoteType" maxlength="1500" placeholder="Type on remote PC (approved only)"/><button class="outline-btn" id="peerTypeButton">Type</button></div>
 <div class="peer-actions"><input aria-label="Remote command" id="peerRemoteCommand" placeholder="Remote shell command (approved only)"/><button class="outline-btn" id="peerCommandButton">Run</button></div>
 <pre class="peer-command-result" hidden="" id="peerCommandResult"></pre>

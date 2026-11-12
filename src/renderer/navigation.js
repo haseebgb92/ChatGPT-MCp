@@ -100,8 +100,8 @@
     $('overviewLocalStatus').textContent = state.localRunning ? 'Running' : 'Stopped';
     $('overviewWebStatus').textContent = state.browserRunning ? 'Running' : 'Stopped';
     $('overviewMetaStatus').textContent = state.metaRunning ? 'Running' : 'Stopped';
-    $('topVersion').textContent = 'v' + (state.appVersion || '0.2.15');
-    $('sidebarVersion').textContent = 'MCP Bridge · v' + (state.appVersion || '0.2.15');
+    $('topVersion').textContent = 'v' + (state.appVersion || '0.2.16');
+    $('sidebarVersion').textContent = 'MCP Bridge · v' + (state.appVersion || '0.2.16');
   }
 
   settings?.addEventListener('change', window.markBridgeUnsaved);

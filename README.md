@@ -505,3 +505,11 @@ For long-running tasks such as local AI model fine-tuning, control permissions n
 The computer owner must explicitly select the trusted peer, choose the duration, and confirm the permission. A visible red control banner appears throughout the app while remote control is active; **Revoke access now** is available there and in the tray menu. Removing the authorized peer, regenerating the invitation token, or revoking permission disables remote command and input access. No control permission is granted automatically by updating.
 
 The screen preview updates roughly once per second while the Team Peers tab is open; it is *not* full-motion video streaming. Remote shell commands still have an individual 20-second execution ceiling; launch long-lived training processes as persistent background jobs and monitor separate logs/checkpoints so a ChatGPT turn or the peer transport does not need to remain open. The owner's explicit revoke stops **new** remote commands/inputs but does not kill independently launched training processes.
+
+## Large remote screen preview (v0.2.16)
+
+From **Team Peers**, select a computer and click **Expand preview**. The remote screen opens in a near-full-window viewer, begins screen sharing automatically if permitted, and keeps the existing mouse-click, remote text and command controls accessible. Choose **Restore view**, press **Esc**, or click the dimmed backdrop to return without disconnecting the peer. Clicking **Stop viewing** also closes the large preview.
+
+Expanded preview uses a larger **1920×1080** JPEG screen capture, while compact preview and the existing `peer_view_screen` MCP tool continue using 1280×720 to reduce Tailnet traffic. Actual capture dimensions depend on the host display and Electron's capture implementation. The preview refreshes roughly once per second, not continuously like a full-video streaming client. Host consent to share the screen or permit remote control is unchanged.
+
+The new preview and restore interactions passed UI automation at 1152×768 and 390×844, including immediate screen start, high-resolution request, keyboard Escape, correct modal sizing, and restoration to the original workspace. All existing MCP/peer unit checks and responsive layout checks passed.

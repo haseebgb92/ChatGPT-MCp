@@ -50,8 +50,8 @@ window.bridge={
  previewDiagnostics:async()=> 'No issues.',copyDiagnostics:noop,reportDiagnostics:noop,
  openExternal:noop,
  peerList:async()=>window.__peerState,
- peerInvite:noop,peerAdd:noop,peerRemove:noop,peerRekey:noop,peerStatus:noop,peerMessages:async()=>[],
- peerSend:noop,peerScreen:noop,peerCommand:noop,peerInput:noop,
+ peerInvite:noop,peerAdd:noop,peerRemove:noop,peerRekey:noop,peerStatus:async()=>({name:'Trusted test PC',screenSize:{width:3072,height:1728},sharingScreen:true,controlAllowed:true,controlMode:'until-revoked'}),peerMessages:async()=>[],
+ peerSend:noop,peerScreen:async(_id,large)=>{window.__actions.push('screen:'+large);return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL9uwAAAABJRU5ErkJggg==';},peerCommand:noop,peerInput:noop,
  peerShare:async enabled=>{window.__peerState.sharingScreen=enabled},
  peerGrant:async (duration,id)=>{window.__actions.push('grant:'+duration);Object.assign(window.__peerState,{controlAllowed:true,controlMode:duration==='until-revoked'?'until-revoked':'timed',controlPeerId:id,controlPeerName:'Trusted test PC',controlExpiresAt:duration==='until-revoked'?null:new Date(Date.now()+Number(duration)*60000).toISOString()});},
  peerRevoke:async()=>{window.__actions.push('revoke');Object.assign(window.__peerState,{controlAllowed:false,controlMode:'off',controlPeerId:null,controlPeerName:null,controlExpiresAt:null});}
@@ -161,6 +161,30 @@ async def main():
         revoked=await client.eval("({mode:window.__peerState.controlMode,hidden:document.querySelector('#peerAccessBanner').hidden,actions:window.__actions})")
         print('REVOKE FROM GLOBAL BANNER',revoked)
         assert revoked['mode']=='off' and revoked['hidden'] and 'revoke' in revoked['actions'],revoked
+        # One click opens the preview as a near-full-screen modal at desktop and mobile widths.
+        for width,height in [(1152,768),(390,844)]:
+            await client.call('Emulation.setDeviceMetricsOverride',{'width':width,'height':height,'deviceScaleFactor':1,'mobile':False})
+            await client.eval("document.querySelector('#tab-peers').click();document.querySelector('#peerSelect').value='trusted-test';document.querySelector('#peerSelect').dispatchEvent(new Event('change',{bubbles:true}));")
+            await asyncio.sleep(.15)
+            await client.eval("document.querySelector('#peerScreenExpand').click();")
+            await asyncio.sleep(.25)
+            result=await client.eval("""(() => {const el=document.querySelector('#peerScreenPane'),r=el.getBoundingClientRect();return {
+              expanded:el.classList.contains('expanded'),modal:el.getAttribute('aria-modal'),
+              parentIsBody:el.parentNode===document.body,width:r.width,height:r.height,
+              highResolution:window.__actions.includes('screen:true'),bodyOverflow:document.documentElement.scrollWidth>innerWidth+2,
+              view:document.querySelector('#peerScreenToggle').textContent};})()""")
+            print('EXPANDED REMOTE PREVIEW',width,height,result)
+            assert result['expanded'] and result['modal']=='true' and result['parentIsBody'], result
+            assert result['width']>width*.85 and result['height']>height*.8 and not result['bodyOverflow'],result
+            assert result['highResolution'] and result['view']=='Stop viewing',result
+            await client.eval("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));")
+            restored=await client.eval("""(() => {const el=document.querySelector('#peerScreenPane');return {
+              collapsed:!el.classList.contains('expanded'),backInWorkspace:el.parentElement.classList.contains('peer-workspace-grid'),
+              expandedAria:document.querySelector('#peerScreenExpand').getAttribute('aria-expanded'),
+              backdropHidden:document.querySelector('.peer-screen-backdrop').hidden};})()""")
+            print('RESTORED PREVIEW',width,restored)
+            assert restored['collapsed'] and restored['backInWorkspace'] and restored['expandedAria']=='false' and restored['backdropHidden'],restored
+            await client.eval("document.querySelector('#tab-overview').click();")
         print('CDP runtime exceptions:',client.errors)
         assert not client.errors,client.errors
         print('ALL VIEWPORT + TAB TESTS PASSED')

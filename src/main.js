@@ -916,7 +916,7 @@ ipcMain.handle('peer:rekey', () => peerNetwork.regenerateInvite());
 ipcMain.handle('peer:status', (_e, id) => peerNetwork.status(id));
 ipcMain.handle('peer:messages', (_e, id) => peerNetwork.messages(id));
 ipcMain.handle('peer:send', (_e, id, message) => peerNetwork.send(id, message));
-ipcMain.handle('peer:screen', (_e, id) => peerNetwork.image(id));
+ipcMain.handle('peer:screen', (_e, id, large) => peerNetwork.image(id, large === true));
 ipcMain.handle('peer:command', (_e, id, cmd) => peerNetwork.command(id, cmd, 12));
 ipcMain.handle('peer:input', (_e, id, data) => peerNetwork.input(id, data));
 ipcMain.handle('peer:share', (_e, value) => peerNetwork.setScreen(value));

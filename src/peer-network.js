@@ -156,14 +156,15 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
     changed();
     return item;
   }
-  async function screenshot() {
+  async function screenshot(large = false) {
     if (!screenEnabled) throw new Error('Screen sharing is off on this PC.');
     const now = Date.now();
     if (now - lastCapture < 450) throw new Error('Screen capture rate limited.');
     lastCapture = now;
-    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1280, height: 720 }, fetchWindowIcons: false });
+    const size = large ? { width: 1920, height: 1080 } : { width: 1280, height: 720 };
+    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: size, fetchWindowIcons: false });
     if (!sources.length || sources[0].thumbnail.isEmpty()) throw new Error('Unable to capture screen.');
-    return sources[0].thumbnail.toJPEG(66);
+    return sources[0].thumbnail.toJPEG(large ? 74 : 66);
   }
   async function handleInput(body, sendingPeer) {
     if (!approvedPeer(sendingPeer)) throw new Error('Remote control has not been approved for this peer on this PC.');
@@ -230,7 +231,7 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
         return reply(res, 200, { saved: true, message: insertMessage(sendingPeer.id, 'received', text) });
       }
       if (key === 'GET /v1/screen') {
-        const jpg = await screenshot();
+        const jpg = await screenshot(url.searchParams.get('quality') === 'large');
         res.writeHead(200, { 'content-type': 'image/jpeg', 'content-length': jpg.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
         res.end(jpg);
         return;
@@ -332,7 +333,7 @@ function createPeerNetwork({ userData, clipboard, desktopCapturer, screen, log =
       const local = messages.filter(m => m.peerId === id || m.peerId === 'incoming');
       return local.slice(-100);
     },
-    async image(id) { return await clientRequest(find(id), '/v1/screen', 'GET', undefined, true); },
+    async image(id, large = false) { return await clientRequest(find(id), large ? '/v1/screen?quality=large' : '/v1/screen', 'GET', undefined, true); },
     async command(id, command, timeout) { return await clientRequest(find(id), '/v1/command', 'POST', { command, timeout }); },
     async input(id, data) { return await clientRequest(find(id), '/v1/input', 'POST', data); },
     async setScreen(value) {
