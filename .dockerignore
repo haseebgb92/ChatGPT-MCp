@@ -1,0 +1,11 @@
+**
+!Dockerfile
+!glama/
+!glama/bridge/
+!glama/bridge/**
+!bundled/
+!bundled/local-mcp/
+!bundled/local-mcp/server.js
+!bundled/local-mcp/config.js
+!bundled/local-mcp/security.js
+!bundled/local-mcp/package.json

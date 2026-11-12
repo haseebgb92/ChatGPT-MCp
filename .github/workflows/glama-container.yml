@@ -1,0 +1,38 @@
+name: Glama restricted container verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - glama/**
+      - bundled/local-mcp/**
+      - tests/glama-container.test.mjs
+      - .github/workflows/glama-container.yml
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - glama/**
+      - bundled/local-mcp/**
+      - tests/glama-container.test.mjs
+      - .github/workflows/glama-container.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  restricted-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install MCP test SDK
+        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+      - name: Build isolated example container
+        run: docker build -t mcp-bridge:glama-readonly .
+      - name: Verify real tool schemas and traversal rejection
+        run: node --test tests/glama-container.test.mjs

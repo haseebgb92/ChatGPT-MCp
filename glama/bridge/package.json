@@ -1,0 +1,1 @@
+{"name":"mcp-bridge-glama-readonly","version":"1.0.0","private":true,"type":"module","description":"Public documentation-only read-only sample of MCP Bridge","dependencies":{"@modelcontextprotocol/sdk":"1.32.0","zod":"3.25.76"}}
