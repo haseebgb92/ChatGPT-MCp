@@ -15,3 +15,6 @@ bundled/meta-manager-proxy-server.js.tmp
 
 # Isolated UI smoke-test images
 /tests/screenshots/
+
+# Checksum-verified release installer extracted for offline build verification.
+/test-artifacts/

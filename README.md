@@ -488,3 +488,11 @@ python3 tests/ui_layout_cdp.py
 ```
 
 This isolated test uses local Chrome DevTools and a mocked Bridge interface. It checks seven views at 390, 700, 900, 1152 and 1440 px, guards against overflow and script errors, verifies keyboard navigation, dirty state, and Save integration. The test does not read production API keys or write production configuration. The Electron app uses the existing Local MCP code and current saved settings.
+
+## v0.2.14 Windows tunnel startup hotfix
+
+v0.2.13 accidentally bundled Linux `node` and `tunnel-client` executables into the Windows NSIS installer. The Windows MCP service launcher requires `resources/node-runtime/node.exe` and `resources/tunnel-client/tunnel-client.exe`, so users without their own Windows copies could not start **Local, Web, or Meta Manager MCP**. This is a packaging regression, **not** a Tailscale or account/tunnel ID problem.
+
+v0.2.14 packages platform-specific binaries and adds `scripts/check-runtime-assets.js` (pre-build) plus `scripts/check-packaged-runtime.js` (post-build) so a wrong-platform build fails before publication. The Windows binaries used for this hotfix were recovered from the official v0.2.11 Windows GitHub release, after verifying that release's SHA-256 checksum; the recovered `node.exe` SHA-256 is `9c9245166b4a8e182e0b797da9c20136117ff24368eaff1fec8343a123c8db0e` and `tunnel-client.exe` is `839cb2cc21cdc4fd1ad793506e8cb98161518ac559ad88c984c9a0e993d89dad`.
+
+For future native Windows source builds, `install-windows.ps1` bundles both locally installed `node.exe` and a freshly built `tunnel-client.exe`. For cross-compilation, first provide trusted Windows x64 binaries in `vendor/node-runtime/node.exe` and `vendor/tunnel-client/tunnel-client.exe`; the build refuses to proceed if they are missing or the wrong format. Linux packages include only Linux executables. The original configured tunnel IDs and encrypted API key remain in user data during in-place upgrades.

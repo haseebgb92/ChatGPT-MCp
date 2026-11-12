@@ -82,6 +82,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Could not build OpenAI tunnel-client." }
     Pop-Location
 
+    # Bundle Windows Node.js explicitly so the installed application never depends on a PATH entry.
+    $NodeRuntimeDir = Join-Path $AppDir "vendor\node-runtime"
+    New-Item -ItemType Directory -Path $NodeRuntimeDir -Force | Out-Null
+    $NodeExecutable = (Get-Command node.exe -ErrorAction Stop).Source
+    Copy-Item -LiteralPath $NodeExecutable -Destination (Join-Path $NodeRuntimeDir "node.exe") -Force
+    Write-Step "Bundled Windows Node runtime and tunnel-client"
+
     Write-Step "Validating application"
     Push-Location $AppDir
     npm run check
